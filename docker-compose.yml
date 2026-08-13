@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: paceup-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: paceup
+      POSTGRES_USER: paceup
+      POSTGRES_PASSWORD: paceup_dev_password
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - paceup_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  paceup_postgres_data:

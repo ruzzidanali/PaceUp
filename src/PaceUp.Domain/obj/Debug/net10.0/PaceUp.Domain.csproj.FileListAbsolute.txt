@@ -5,6 +5,7 @@ C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.G
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.AssemblyInfoInputs.cache
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.AssemblyInfo.cs
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.csproj.CoreCompileInputs.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.sourcelink.json
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\refint\PaceUp.Domain.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Domain\obj\Debug\net10.0\PaceUp.Domain.pdb

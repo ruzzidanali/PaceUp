@@ -5,6 +5,13 @@ C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\PaceUp.Worker.d
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\PaceUp.Worker.runtimeconfig.json
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\PaceUp.Worker.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\PaceUp.Worker.pdb
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\FluentValidation.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\FluentValidation.DependencyInjectionExtensions.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Relational.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Caching.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Caching.Memory.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Configuration.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Configuration.Abstractions.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Configuration.Binder.dll
@@ -32,6 +39,12 @@ C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Exten
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Options.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Options.ConfigurationExtensions.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Microsoft.Extensions.Primitives.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\NetTopologySuite.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\NetTopologySuite.IO.PostGis.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Npgsql.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\Npgsql.NetTopologySuite.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\System.Diagnostics.EventLog.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\runtimes\win\lib\net10.0\System.Diagnostics.EventLog.Messages.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\bin\Debug\net10.0\runtimes\win\lib\net10.0\System.Diagnostics.EventLog.dll
@@ -46,6 +59,7 @@ C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.G
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.AssemblyInfoInputs.cache
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.AssemblyInfo.cs
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.csproj.CoreCompileInputs.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.sourcelink.json
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.W.927E2017.Up2Date
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\PaceUp.Worker.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Worker\obj\Debug\net10.0\refint\PaceUp.Worker.dll

@@ -8,7 +8,19 @@ C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\PaceUp.Uni
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\PaceUp.UnitTests.runtimeconfig.json
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\PaceUp.UnitTests.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\PaceUp.UnitTests.pdb
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\FluentValidation.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\FluentValidation.DependencyInjectionExtensions.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.VisualStudio.CodeCoverage.Shim.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Caching.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Caching.Memory.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Logging.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Options.dll
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.Extensions.Primitives.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.TestPlatform.CoreUtilities.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.TestPlatform.PlatformAbstractions.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\bin\Debug\net10.0\Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
@@ -94,6 +106,7 @@ C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.Uni
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.UnitTests.AssemblyInfoInputs.cache
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.UnitTests.AssemblyInfo.cs
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.UnitTests.csproj.CoreCompileInputs.cache
+C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.UnitTests.sourcelink.json
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.U.9C87CC81.Up2Date
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\PaceUp.UnitTests.dll
 C:\Users\PC\Documents\PaceUp\tests\PaceUp.UnitTests\obj\Debug\net10.0\refint\PaceUp.UnitTests.dll

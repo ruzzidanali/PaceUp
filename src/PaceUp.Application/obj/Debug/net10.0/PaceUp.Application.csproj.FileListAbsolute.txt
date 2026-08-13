@@ -8,6 +8,7 @@ C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.App
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.Application.AssemblyInfoInputs.cache
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.Application.AssemblyInfo.cs
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.Application.csproj.CoreCompileInputs.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.Application.sourcelink.json
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.A.2B6B2E5C.Up2Date
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\PaceUp.Application.dll
 C:\Users\PC\Documents\PaceUp\src\PaceUp.Application\obj\Debug\net10.0\refint\PaceUp.Application.dll

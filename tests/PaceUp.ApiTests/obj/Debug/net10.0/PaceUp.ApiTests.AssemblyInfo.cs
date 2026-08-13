@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PaceUp.ApiTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+91d692e58f8f973fcb2897ad64eb9ceeadd5bdc1")]
 [assembly: System.Reflection.AssemblyProductAttribute("PaceUp.ApiTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PaceUp.ApiTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
