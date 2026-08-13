@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PaceUp.Api/PaceUp.Api.csproj" />
+    <Project Path="src/PaceUp.Application/PaceUp.Application.csproj" />
+    <Project Path="src/PaceUp.Domain/PaceUp.Domain.csproj" />
+    <Project Path="src/PaceUp.Infrastructure/PaceUp.Infrastructure.csproj" />
+    <Project Path="src/PaceUp.Worker/PaceUp.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PaceUp.ApiTests/PaceUp.ApiTests.csproj" />
+    <Project Path="tests/PaceUp.IntegrationTests/PaceUp.IntegrationTests.csproj" />
+    <Project Path="tests/PaceUp.UnitTests/PaceUp.UnitTests.csproj" />
+  </Folder>
+</Solution>

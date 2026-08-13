@@ -1,0 +1,17 @@
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Infrastructure.deps.json
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Infrastructure.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Infrastructure.pdb
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Application.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Domain.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Application.pdb
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\bin\Debug\net10.0\PaceUp.Domain.pdb
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.AssemblyInfo.cs
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.I.8FE5BE1D.Up2Date
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\refint\PaceUp.Infrastructure.dll
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\PaceUp.Infrastructure.pdb
+C:\Users\PC\Documents\PaceUp\src\PaceUp.Infrastructure\obj\Debug\net10.0\ref\PaceUp.Infrastructure.dll
