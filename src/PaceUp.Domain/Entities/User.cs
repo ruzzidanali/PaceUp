@@ -10,6 +10,7 @@ public class User
     public string? ProfileImageUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+    public UserIdentity? Identity { get; private set; }
     private User()
     {
     }

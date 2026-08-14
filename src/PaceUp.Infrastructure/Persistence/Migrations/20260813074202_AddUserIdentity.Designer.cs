@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PaceUp.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using PaceUp.Infrastructure.Persistence;
 namespace PaceUp.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PaceUpDbContext))]
-    partial class PaceUpDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813074202_AddUserIdentity")]
+    partial class AddUserIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,42 +25,6 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("PaceUp.Domain.Entities.Activity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("Calories")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<double>("Distance")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("DurationSeconds")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "StartedAt");
-
-                    b.ToTable("activities", (string)null);
-                });
 
             modelBuilder.Entity("PaceUp.Domain.Entities.User", b =>
                 {
@@ -131,17 +98,6 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("user_identities", (string)null);
-                });
-
-            modelBuilder.Entity("PaceUp.Domain.Entities.Activity", b =>
-                {
-                    b.HasOne("PaceUp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PaceUp.Domain.Entities.UserIdentity", b =>
