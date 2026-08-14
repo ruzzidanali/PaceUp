@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using PaceUp.Application.DTOs.Authentication;
 using PaceUp.Application.DTOs.Users;
 using PaceUp.Infrastructure.Persistence;
 using PaceUp.IntegrationTests.Infrastructure;
@@ -24,9 +26,11 @@ public class UsersApiTests
     {
         await using var factory =
             new PaceUpWebApplicationFactory(
-                _database.ConnectionString);
+                _database);
 
         using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
 
         var request = new CreateUserRequest(
             "integration_user",
@@ -77,9 +81,11 @@ public class UsersApiTests
     {
         await using var factory =
             new PaceUpWebApplicationFactory(
-                _database.ConnectionString);
+                _database);
 
         using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
 
         var createRequest = new CreateUserRequest(
             "get_user",
@@ -127,9 +133,11 @@ public class UsersApiTests
     {
         await using var factory =
             new PaceUpWebApplicationFactory(
-                _database.ConnectionString);
+                _database);
 
         using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
 
         var firstRequest = new CreateUserRequest(
             "duplicate_user",
@@ -158,5 +166,92 @@ public class UsersApiTests
         Assert.Equal(
             HttpStatusCode.Conflict,
             secondResponse.StatusCode);
+    }
+
+    private static async Task AuthenticateAsync(
+        HttpClient client)
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"test_auth_{uniqueId}",
+            $"test_auth_{uniqueId}@example.com",
+            "Test Auth User",
+            "Password123!");
+
+        var registerResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.True(
+            registerResponse.IsSuccessStatusCode,
+            $"Registration failed with status {registerResponse.StatusCode}.");
+
+        var loginRequest = new LoginRequest(
+    $"test_auth_{uniqueId}@example.com",
+    "Password123!");
+
+        var loginResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/login",
+                loginRequest);
+
+        Assert.True(
+            loginResponse.IsSuccessStatusCode,
+            $"Login failed with status {loginResponse.StatusCode}.");
+
+        var authResponse =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                authResponse.AccessToken);
+    }
+
+    [Fact]
+    public async Task GetUser_WithoutToken_ShouldReturnUnauthorized()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        var response =
+            await client.GetAsync(
+                $"/api/users/{Guid.NewGuid()}");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateUser_WithoutToken_ShouldReturnUnauthorized()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        var request = new CreateUserRequest(
+            "unauthorized_user",
+            "unauthorized@example.com",
+            "Unauthorized User");
+
+        var response =
+            await client.PostAsJsonAsync(
+                "/api/users",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 }

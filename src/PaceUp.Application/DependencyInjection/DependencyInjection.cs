@@ -2,6 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using PaceUp.Application.Abstractions.Users;
 using PaceUp.Application.Features.Users;
 using FluentValidation;
+using PaceUp.Application.Abstractions.Authentication;
+using PaceUp.Application.Features.Authentication;
+using PaceUp.Application.Abstractions.Activities;
+using PaceUp.Application.Features.Activities;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -12,8 +16,12 @@ public static class DependencyInjection
     {
         services.AddScoped<IUserService, UserService>();
 
+        services.AddScoped<IAuthenticationService,AuthenticationService>();
+
         services.AddValidatorsFromAssembly(
             typeof(DependencyInjection).Assembly);
+
+        services.AddScoped<IActivityService, ActivityService>();
 
         return services;
     }

@@ -15,6 +15,10 @@ public class PaceUpDbContext :
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Activity> Activities => Set<Activity>();
+
+    public DbSet<UserIdentity> UserIdentities =>
+        Set<UserIdentity>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)

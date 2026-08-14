@@ -26,6 +26,13 @@ public class GlobalExceptionHandler : IExceptionHandler
                 "Request conflict: {Message}",
                 exception.Message);
         }
+        else if (exception is UnauthorizedAccessException)
+        {
+            _logger.LogWarning(
+                exception,
+                "Unauthorized request: {Message}",
+                exception.Message);
+        }
         else
         {
             _logger.LogError(
@@ -35,22 +42,32 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         var statusCode = exception switch
         {
-            ConflictException => StatusCodes.Status409Conflict,
+            ConflictException =>
+                StatusCodes.Status409Conflict,
 
-            _ => StatusCodes.Status500InternalServerError
+            UnauthorizedAccessException =>
+                StatusCodes.Status401Unauthorized,
+
+            _ =>
+                StatusCodes.Status500InternalServerError
+        };
+
+        var title = exception switch
+        {
+            ConflictException =>
+                "Conflict",
+
+            UnauthorizedAccessException =>
+                "Unauthorized",
+
+            _ =>
+                "An unexpected error occurred."
         };
 
         var problemDetails = new ProblemDetails
         {
             Status = statusCode,
-            Title = exception switch
-            {
-                ConflictException =>
-                    "Conflict",
-
-                _ =>
-                    "An unexpected error occurred."
-            },
+            Title = title,
             Detail = exception.Message
         };
 

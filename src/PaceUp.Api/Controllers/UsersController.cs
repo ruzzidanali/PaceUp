@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using PaceUp.Application.Abstractions.Users;
 using PaceUp.Application.DTOs.Users;
+using Microsoft.AspNetCore.Authorization;
+using PaceUp.Api.Extensions;
 
 namespace PaceUp.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/users")]
 public class UsersController : ControllerBase
@@ -46,6 +49,25 @@ public class UsersController : ControllerBase
         var user = await _userService.GetByIdAsync(
             id,
             cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
+    }
+
+    [HttpGet("me")]
+    public async Task<ActionResult<UserResponse>> GetMe(
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var user =
+            await _userService.GetByIdAsync(
+                userId,
+                cancellationToken);
 
         if (user is null)
         {

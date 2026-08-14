@@ -12,9 +12,10 @@ public class PaceUpWebApplicationFactory
     private readonly string _connectionString;
 
     public PaceUpWebApplicationFactory(
-        string connectionString)
+        PostgreSqlContainerFixture postgresFixture)
     {
-        _connectionString = connectionString;
+        _connectionString =
+            postgresFixture.ConnectionString;
     }
 
     protected override void ConfigureWebHost(
@@ -24,10 +25,12 @@ public class PaceUpWebApplicationFactory
 
         builder.ConfigureServices(services =>
         {
-            var descriptor = services
-                .SingleOrDefault(
-                    d => d.ServiceType ==
-                         typeof(DbContextOptions<PaceUpDbContext>));
+            var descriptor =
+                services.SingleOrDefault(
+                    d =>
+                        d.ServiceType ==
+                        typeof(
+                            DbContextOptions<PaceUpDbContext>));
 
             if (descriptor is not null)
             {
@@ -47,7 +50,8 @@ public class PaceUpWebApplicationFactory
                 });
 
             using var scope =
-                services.BuildServiceProvider()
+                services
+                    .BuildServiceProvider()
                     .CreateScope();
 
             var dbContext =
