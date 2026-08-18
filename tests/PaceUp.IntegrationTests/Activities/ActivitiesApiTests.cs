@@ -8,20 +8,28 @@ using PaceUp.IntegrationTests.Infrastructure;
 namespace PaceUp.IntegrationTests.Activities;
 
 public class ActivitiesApiTests
-    : IClassFixture<PaceUpIntegrationFixture>
+    : IClassFixture<PostgreSqlContainerFixture>
 {
+    private readonly PostgreSqlContainerFixture _database;
+    private readonly PaceUpWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
     public ActivitiesApiTests(
-        PaceUpIntegrationFixture fixture)
+        PostgreSqlContainerFixture database)
     {
-        _client = fixture.Factory.CreateClient();
+        _database = database;
+
+        _factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        _client = _factory.CreateClient();
     }
 
     [Fact]
     public async Task CreateActivity_ShouldReturnCreatedActivity()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -80,7 +88,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_ShouldReturnCurrentUsersActivities()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -108,30 +116,45 @@ public class ActivitiesApiTests
             HttpStatusCode.OK,
             response.StatusCode);
 
-        var activities =
-            await response.Content
-                .ReadFromJsonAsync<
-                    IReadOnlyList<ActivityResponse>>();
+        var result =
+    await response.Content
+        .ReadFromJsonAsync<PagedActivityResponse>();
 
-        Assert.NotNull(activities);
+        Assert.NotNull(result);
 
         Assert.Equal(
             2,
-            activities.Count);
+            result.TotalCount);
+
+        Assert.Equal(
+            1,
+            result.Page);
+
+        Assert.Equal(
+            20,
+            result.PageSize);
+
+        Assert.Equal(
+            1,
+            result.TotalPages);
+
+        Assert.Equal(
+            2,
+            result.Items.Count);
 
         Assert.Equal(
             "Ride",
-            activities[0].Type);
+            result.Items[0].Type);
 
         Assert.Equal(
             "Run",
-            activities[1].Type);
+            result.Items[1].Type);
     }
 
     [Fact]
     public async Task GetActivity_ShouldReturnOwnActivity()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -171,7 +194,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_ShouldReturnCurrentUsersStatistics()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -275,20 +298,20 @@ public class ActivitiesApiTests
             response.StatusCode);
     }
 
-    private async Task AuthenticateAsync()
+    private static async Task AuthenticateAsync(HttpClient client)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
 
         var registerRequest =
             new RegisterRequest(
-                $"activity_api_{uniqueId}",
-                $"activity_api_{uniqueId}@example.com",
-                "Activity API User",
+                $"test_auth_{uniqueId}",
+                $"test_auth_{uniqueId}@example.com",
+                "Test Auth User",
                 "Password123!");
 
         var registerResponse =
-            await _client.PostAsJsonAsync(
+            await client.PostAsJsonAsync(
                 "/api/auth/register",
                 registerRequest);
 
@@ -297,7 +320,7 @@ public class ActivitiesApiTests
             $"Registration failed: {registerResponse.StatusCode}");
 
         var loginResponse =
-            await _client.PostAsJsonAsync(
+            await client.PostAsJsonAsync(
                 "/api/auth/login",
                 new LoginRequest(
                     registerRequest.Email,
@@ -313,7 +336,7 @@ public class ActivitiesApiTests
 
         Assert.NotNull(authResponse);
 
-        _client.DefaultRequestHeaders.Authorization =
+        client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(
                 "Bearer",
                 authResponse.AccessToken);
@@ -322,7 +345,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_ShouldUpdateOwnActivity()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -391,7 +414,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_WhenNotFound_ShouldReturnNotFound()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var request =
             new UpdateActivityRequest(
@@ -414,7 +437,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task DeleteActivity_ShouldDeleteOwnActivity()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -456,7 +479,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task DeleteActivity_WhenNotFound_ShouldReturnNotFound()
     {
-        await AuthenticateAsync();
+        await AuthenticateAsync(_client);
 
         var response =
             await _client.DeleteAsync(
@@ -465,5 +488,280 @@ public class ActivitiesApiTests
         Assert.Equal(
             HttpStatusCode.NotFound,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
+    {
+        await AuthenticateAsync(_client);
+
+        var createResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5.0,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createResponse.StatusCode);
+
+        var created =
+            await createResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(created);
+
+        await using var secondFactory =
+            new PaceUpWebApplicationFactory(
+                _database
+            );
+
+        using var secondClient =
+            secondFactory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        var response =
+            await secondClient.GetAsync(
+                $"/api/activities/{created.Id}"
+            );
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode
+        );
+    }
+
+    [Fact]
+    public async Task UpdateActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
+    {
+        await AuthenticateAsync(_client);
+
+        var createResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5.0,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createResponse.StatusCode);
+
+        var created =
+            await createResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(created);
+
+        await using var secondFactory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var secondClient =
+            secondFactory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        var updateRequest =
+            new UpdateActivityRequest(
+                "Ride",
+                100,
+                7200,
+                2000,
+                DateTime.UtcNow);
+
+        var response =
+            await secondClient.PutAsJsonAsync(
+                $"/api/activities/{created.Id}",
+                updateRequest);
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+
+        var ownerResponse =
+            await _client.GetAsync(
+                $"/api/activities/{created.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            ownerResponse.StatusCode);
+
+        var activity =
+            await ownerResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(activity);
+
+        Assert.Equal(
+            "Run",
+            activity.Type);
+
+        Assert.Equal(
+            5.0,
+            activity.Distance);
+    }
+
+    [Fact]
+    public async Task DeleteActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
+    {
+        await AuthenticateAsync(_client);
+
+        var createResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5.0,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createResponse.StatusCode);
+
+        var created =
+            await createResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(created);
+
+        await using var secondFactory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var secondClient =
+            secondFactory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        var response =
+            await secondClient.DeleteAsync(
+                $"/api/activities/{created.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+
+        var ownerResponse =
+            await _client.GetAsync(
+                $"/api/activities/{created.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            ownerResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivities_ShouldOnlyReturnCurrentUsersActivities()
+    {
+        await AuthenticateAsync(_client);
+
+        var ownerActivityResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5.0,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            ownerActivityResponse.StatusCode);
+
+        var ownerActivity =
+            await ownerActivityResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(ownerActivity);
+
+        await using var secondFactory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var secondClient =
+            secondFactory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        var secondUserActivityResponse =
+            await secondClient.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Ride",
+                    20.0,
+                    3600,
+                    800,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            secondUserActivityResponse.StatusCode);
+
+        var secondUserActivity =
+            await secondUserActivityResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(secondUserActivity);
+
+        var response =
+            await secondClient.GetAsync(
+                "/api/activities");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Equal(
+            1,
+            result.TotalCount);
+
+        Assert.Equal(
+            1,
+            result.Page);
+
+        Assert.Equal(
+            20,
+            result.PageSize);
+
+        Assert.Equal(
+            1,
+            result.TotalPages);
+
+        Assert.Single(
+            result.Items);
+
+        Assert.Equal(
+            secondUserActivity.Id,
+            result.Items[0].Id);
+
+        Assert.Equal(
+            "Ride",
+            result.Items[0].Type);
+
+        Assert.Equal(
+            20.0,
+            result.Items[0].Distance);
+
+        Assert.NotEqual(
+            ownerActivity.Id,
+            result.Items[0].Id);
     }
 }

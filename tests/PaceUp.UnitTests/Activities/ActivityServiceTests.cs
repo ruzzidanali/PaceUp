@@ -600,27 +600,46 @@ public class ActivityServiceTests
         var service = new ActivityService(db);
 
         var results =
-            await service.GetUserActivitiesAsync(
-                user.Id,
-                CancellationToken.None);
+    await service.GetUserActivitiesAsync(
+        user.Id,
+        new ActivityListRequest(
+            Page: 1,
+            PageSize: 20),
+        CancellationToken.None);
+
+        Assert.Equal(
+    2,
+    results.TotalCount);
+
+        Assert.Equal(
+            1,
+            results.Page);
+
+        Assert.Equal(
+            20,
+            results.PageSize);
+
+        Assert.Equal(
+            1,
+            results.TotalPages);
 
         Assert.Equal(
             2,
-            results.Count);
+            results.Items.Count);
 
         Assert.All(
-            results,
-            x => Assert.Equal(
-                user.Id,
-                x.UserId));
+    results.Items,
+    x => Assert.Equal(
+        user.Id,
+        x.UserId));
 
         Assert.Equal(
-            secondActivity.Id,
-            results[0].Id);
+    secondActivity.Id,
+    results.Items[0].Id);
 
         Assert.Equal(
             firstActivity.Id,
-            results[1].Id);
+            results.Items[1].Id);
     }
 
     private static TestDbContext CreateDatabase()

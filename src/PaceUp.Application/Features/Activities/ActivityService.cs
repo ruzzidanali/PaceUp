@@ -56,21 +56,51 @@ public class ActivityService : IActivityService
             : Map(activity);
     }
 
-    public async Task<IReadOnlyList<ActivityResponse>>
-        GetUserActivitiesAsync(
-            Guid userId,
-            CancellationToken cancellationToken)
+    public async Task<PagedActivityResponse> GetUserActivitiesAsync(
+    Guid userId,
+    ActivityListRequest request,
+    CancellationToken cancellationToken)
     {
-        var activities =
-            await _dbContext.Activities
+        var page =
+            Math.Max(request.Page, 1);
+
+        var pageSize =
+            Math.Clamp(request.PageSize, 1, 100);
+
+        var query =
+            _dbContext.Activities
                 .AsNoTracking()
-                .Where(x => x.UserId == userId)
+                .Where(x => x.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(request.Type))
+        {
+            query = query.Where(
+                x => x.Type == request.Type);
+        }
+
+        var totalCount =
+            await query.CountAsync(
+                cancellationToken);
+
+        var activities =
+            await query
                 .OrderByDescending(x => x.StartedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-        return activities
-            .Select(Map)
-            .ToList();
+        var totalPages =
+            totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(
+                    totalCount / (double)pageSize);
+
+        return new PagedActivityResponse(
+            activities.Select(Map).ToList(),
+            page,
+            pageSize,
+            totalCount,
+            totalPages);
     }
 
     public async Task<ActivityStatsResponse> GetStatsAsync(
