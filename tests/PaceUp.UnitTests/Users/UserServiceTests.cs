@@ -181,4 +181,116 @@ public class UserServiceTests
                 .HasKey(x => x.Id);
         }
     }
+
+    [Fact]
+    public async Task UpdateProfileImageAsync_ShouldUpdateProfileImage()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var user =
+            new User(
+                "ruzzidan",
+                "ruzzidan@example.com",
+                "Ruzzidan");
+
+        db.Users.Add(user);
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new UserService(db);
+
+        var request =
+            new UpdateProfileImageRequest(
+                "https://example.com/profile.jpg");
+
+        var result =
+            await service.UpdateProfileImageAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(
+            "https://example.com/profile.jpg",
+            result.ProfileImageUrl);
+
+        var savedUser =
+            await db.Users
+                .SingleAsync(
+                    x => x.Id == user.Id);
+
+        Assert.Equal(
+            "https://example.com/profile.jpg",
+            savedUser.ProfileImageUrl);
+    }
+
+    [Fact]
+    public async Task UpdateProfileImageAsync_WhenUserDoesNotExist_ShouldReturnNull()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var service =
+            new UserService(db);
+
+        var request =
+            new UpdateProfileImageRequest(
+                "https://example.com/profile.jpg");
+
+        var result =
+            await service.UpdateProfileImageAsync(
+                Guid.NewGuid(),
+                request,
+                CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task UpdateProfileImageAsync_WithNullUrl_ShouldClearProfileImage()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var user =
+            new User(
+                "ruzzidan",
+                "ruzzidan@example.com",
+                "Ruzzidan");
+
+        user.UpdateProfileImage(
+            "https://example.com/old-profile.jpg");
+
+        db.Users.Add(user);
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new UserService(db);
+
+        var request =
+            new UpdateProfileImageRequest(null);
+
+        var result =
+            await service.UpdateProfileImageAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Null(
+            result.ProfileImageUrl);
+
+        var savedUser =
+            await db.Users
+                .SingleAsync(
+                    x => x.Id == user.Id);
+
+        Assert.Null(
+            savedUser.ProfileImageUrl);
+    }
 }

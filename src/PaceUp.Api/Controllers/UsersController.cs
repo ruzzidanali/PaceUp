@@ -102,4 +102,30 @@ public class UsersController : ControllerBase
 
         return Ok(user);
     }
+
+    [HttpPut("me/profile-image")]
+    [ProducesResponseType(
+    typeof(UserResponse),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(
+    StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserResponse>> UpdateProfileImage(
+    [FromBody] UpdateProfileImageRequest request,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var user =
+            await _userService.UpdateProfileImageAsync(
+                userId,
+                request,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
+    }
 }

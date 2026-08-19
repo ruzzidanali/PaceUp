@@ -320,4 +320,101 @@ public class UsersApiTests
             HttpStatusCode.Unauthorized,
             response.StatusCode);
     }
+
+    [Fact]
+    public async Task UpdateMe_ShouldUpdateProfile()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var request = new UpdateProfileRequest(
+            "Updated Integration User",
+            "This is my updated bio.");
+
+        var response =
+            await client.PutAsJsonAsync(
+                "/api/users/me",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var user =
+            await response.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+
+        Assert.Equal(
+            "Updated Integration User",
+            user.DisplayName);
+
+        Assert.Equal(
+            "This is my updated bio.",
+            user.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateProfileImage_ShouldReturnUpdatedUser()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var request =
+            new UpdateProfileImageRequest(
+                "https://example.com/profile.jpg");
+
+        var response =
+            await client.PutAsJsonAsync(
+                "/api/users/me/profile-image",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var user =
+            await response.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+
+        Assert.Equal(
+            "https://example.com/profile.jpg",
+            user.ProfileImageUrl);
+    }
+
+    [Fact]
+    public async Task UpdateProfileImage_WithoutToken_ShouldReturnUnauthorized()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        var request =
+            new UpdateProfileImageRequest(
+                "https://example.com/profile.jpg");
+
+        var response =
+            await client.PutAsJsonAsync(
+                "/api/users/me/profile-image",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
 }

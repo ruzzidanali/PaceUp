@@ -16,4 +16,9 @@ public interface IUserService
         Guid userId,
         UpdateProfileRequest request,
         CancellationToken cancellationToken);
+
+    Task<UserResponse?> UpdateProfileImageAsync(
+        Guid userId,
+        UpdateProfileImageRequest request,
+        CancellationToken cancellationToken);
 }

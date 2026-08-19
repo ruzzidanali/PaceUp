@@ -106,4 +106,28 @@ public class UserService : IUserService
 
         return Map(user);
     }
+
+    public async Task<UserResponse?> UpdateProfileImageAsync(
+    Guid userId,
+    UpdateProfileImageRequest request,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Id == userId,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.UpdateProfileImage(
+            request.ProfileImageUrl);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return Map(user);
+    }
 }
