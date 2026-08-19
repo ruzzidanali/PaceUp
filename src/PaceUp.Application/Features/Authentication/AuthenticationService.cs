@@ -133,4 +133,43 @@ public class AuthenticationService : IAuthenticationService
             accessToken,
             _jwtTokenService.GetAccessTokenExpiration());
     }
+
+    public async Task ChangePasswordAsync(
+    Guid userId,
+    ChangePasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == userId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid user.");
+        }
+
+        var currentPasswordValid =
+            _passwordHasher.Verify(
+                request.CurrentPassword,
+                identity.PasswordHash);
+
+        if (!currentPasswordValid)
+        {
+            throw new UnauthorizedAccessException(
+                "Current password is incorrect.");
+        }
+
+        var newPasswordHash =
+            _passwordHasher.Hash(
+                request.NewPassword);
+
+        identity.UpdatePassword(
+            newPasswordHash);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
 }

@@ -223,4 +223,142 @@ public class AuthenticationApiTests
             HttpStatusCode.Unauthorized,
             response.StatusCode);
     }
+
+    [Fact]
+public async Task ChangePassword_ShouldChangePassword()
+{
+
+    var uniqueId = Guid.NewGuid().ToString("N");
+
+    var registerRequest = new RegisterRequest(
+        $"change_password_{uniqueId}",
+        $"change_password_{uniqueId}@example.com",
+        "Change Password User",
+        "OldPassword123!");
+
+    var registerResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registerRequest);
+
+    Assert.Equal(
+        HttpStatusCode.OK,
+        registerResponse.StatusCode);
+
+    var loginRequest = new LoginRequest(
+        registerRequest.Email,
+        "OldPassword123!");
+
+    var loginResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            loginRequest);
+
+    Assert.Equal(
+        HttpStatusCode.OK,
+        loginResponse.StatusCode);
+
+    var authResponse =
+        await loginResponse.Content
+            .ReadFromJsonAsync<AuthResponse>();
+
+    Assert.NotNull(authResponse);
+
+    _client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue(
+            "Bearer",
+            authResponse.AccessToken);
+
+    var changePasswordRequest =
+        new ChangePasswordRequest(
+            "OldPassword123!",
+            "NewPassword456!");
+
+    var changeResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/change-password",
+            changePasswordRequest);
+
+    Assert.Equal(
+        HttpStatusCode.NoContent,
+        changeResponse.StatusCode);
+
+    var newLoginResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                registerRequest.Email,
+                "NewPassword456!"));
+
+    Assert.Equal(
+        HttpStatusCode.OK,
+        newLoginResponse.StatusCode);
+}
+
+[Fact]
+public async Task ChangePassword_WithWrongCurrentPassword_ShouldReturnUnauthorized()
+{
+
+    var uniqueId = Guid.NewGuid().ToString("N");
+
+    var registerRequest = new RegisterRequest(
+        $"wrong_password_{uniqueId}",
+        $"wrong_password_{uniqueId}@example.com",
+        "Wrong Password User",
+        "OldPassword123!");
+
+    var registerResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registerRequest);
+
+    Assert.Equal(
+        HttpStatusCode.OK,
+        registerResponse.StatusCode);
+
+    var loginResponse =
+        await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                registerRequest.Email,
+                "OldPassword123!"));
+
+    var authResponse =
+        await loginResponse.Content
+            .ReadFromJsonAsync<AuthResponse>();
+
+    Assert.NotNull(authResponse);
+
+    _client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue(
+            "Bearer",
+            authResponse.AccessToken);
+
+    var response =
+        await _client.PostAsJsonAsync(
+            "/api/auth/change-password",
+            new ChangePasswordRequest(
+                "WrongPassword!",
+                "NewPassword456!"));
+
+    Assert.Equal(
+        HttpStatusCode.Unauthorized,
+        response.StatusCode);
+}
+
+[Fact]
+public async Task ChangePassword_WithoutToken_ShouldReturnUnauthorized()
+{
+
+    var response =
+        await _client.PostAsJsonAsync(
+            "/api/auth/change-password",
+            new ChangePasswordRequest(
+                "OldPassword123!",
+                "NewPassword456!"));
+
+    Assert.Equal(
+        HttpStatusCode.Unauthorized,
+        response.StatusCode);
+}
 }

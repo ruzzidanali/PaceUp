@@ -11,4 +11,9 @@ public interface IAuthenticationService
     Task<AuthResponse> LoginAsync(
         LoginRequest request,
         CancellationToken cancellationToken);
+
+    Task ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken);
 }

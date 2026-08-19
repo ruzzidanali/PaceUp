@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PaceUp.Api.Extensions;
 using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Application.DTOs.Authentication;
 
@@ -40,5 +42,23 @@ public class AuthController : ControllerBase
                 cancellationToken);
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword(
+    [FromBody] ChangePasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        await _authenticationService.ChangePasswordAsync(
+            userId,
+            request,
+            cancellationToken);
+
+        return NoContent();
     }
 }

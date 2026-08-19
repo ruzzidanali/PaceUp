@@ -277,4 +277,140 @@ public class AuthenticationServiceTests
                 .HasKey(x => x.UserId);
         }
     }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithCorrectCurrentPassword_ShouldSucceed()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var tokenService =
+            new FakeJwtTokenService();
+
+        var user =
+            new User(
+                "change_password_user",
+                "change@example.com",
+                "Change Password User");
+
+        var identity =
+            new UserIdentity(
+                user.Id,
+                passwordHasher.Hash("OldPassword123!"));
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService);
+
+        var request =
+            new ChangePasswordRequest(
+                "OldPassword123!",
+                "NewPassword456!");
+
+        await service.ChangePasswordAsync(
+            user.Id,
+            request,
+            CancellationToken.None);
+
+        var updatedIdentity =
+            await db.UserIdentities
+                .SingleAsync(
+                    x => x.UserId == user.Id);
+
+        Assert.True(
+            passwordHasher.Verify(
+                "NewPassword456!",
+                updatedIdentity.PasswordHash));
+
+        Assert.False(
+            passwordHasher.Verify(
+                "OldPassword123!",
+                updatedIdentity.PasswordHash));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithIncorrectCurrentPassword_ShouldThrowUnauthorized()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var tokenService =
+            new FakeJwtTokenService();
+
+        var user =
+            new User(
+                "change_password_user",
+                "change@example.com",
+                "Change Password User");
+
+        var identity =
+            new UserIdentity(
+                user.Id,
+                passwordHasher.Hash("OldPassword123!"));
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService);
+
+        var request =
+            new ChangePasswordRequest(
+                "WrongPassword!",
+                "NewPassword456!");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.ChangePasswordAsync(
+                user.Id,
+                request,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WhenUserIdentityDoesNotExist_ShouldThrowUnauthorized()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var tokenService =
+            new FakeJwtTokenService();
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService);
+
+        var request =
+            new ChangePasswordRequest(
+                "OldPassword123!",
+                "NewPassword456!");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.ChangePasswordAsync(
+                Guid.NewGuid(),
+                request,
+                CancellationToken.None));
+    }
 }
