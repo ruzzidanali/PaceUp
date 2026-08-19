@@ -261,7 +261,10 @@ public class AuthenticationServiceTests
             Set<User>();
 
         public DbSet<Activity> Activities =>
-    Set<Activity>();
+            Set<Activity>();
+
+        public DbSet<Goal> Goals =>
+            Set<Goal>();
 
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();

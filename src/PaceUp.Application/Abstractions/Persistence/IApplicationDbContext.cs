@@ -11,6 +11,8 @@ public interface IApplicationDbContext
 
     DbSet<Activity> Activities { get; }
 
+    DbSet<Goal> Goals { get; }
+
     Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default);
 }

@@ -17,6 +17,8 @@ public class PaceUpDbContext :
     public DbSet<User> Users => Set<User>();
     public DbSet<Activity> Activities => Set<Activity>();
 
+    public DbSet<Goal> Goals => Set<Goal>();
+
     public DbSet<UserIdentity> UserIdentities =>
         Set<UserIdentity>();
 

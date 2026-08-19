@@ -669,6 +669,9 @@ public class ActivityServiceTests
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();
 
+        public DbSet<Goal> Goals =>
+            Set<Goal>();
+
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
