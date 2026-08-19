@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using PaceUp.Application.DTOs.Activities;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 
 namespace PaceUp.IntegrationTests.Activities;
 
@@ -763,5 +764,412 @@ public class ActivitiesApiTests
         Assert.NotEqual(
             ownerActivity.Id,
             result.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task GetActivities_WithPagination_ShouldReturnCorrectPage()
+    {
+        await AuthenticateAsync(_client);
+
+        for (var i = 1; i <= 5; i++)
+        {
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/activities",
+                    new CreateActivityRequest(
+                        "Run",
+                        i,
+                        1800,
+                        300,
+                        DateTime.UtcNow.AddMinutes(i)));
+
+            Assert.Equal(
+                HttpStatusCode.Created,
+                response.StatusCode);
+        }
+
+        var paginationResponse =
+            await _client.GetAsync(
+                "/api/activities?page=2&pageSize=2");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            paginationResponse.StatusCode);
+
+        var paginationResult =
+            await paginationResponse.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(paginationResult);
+
+        Assert.Equal(2, paginationResult.Page);
+        Assert.Equal(2, paginationResult.PageSize);
+        Assert.Equal(5, paginationResult.TotalCount);
+        Assert.Equal(3, paginationResult.TotalPages);
+
+        Assert.Equal(2, paginationResult.Items.Count);
+    }
+
+    [Fact]
+    public async Task GetActivities_WithTypeFilter_ShouldReturnOnlyMatchingActivities()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                DateTime.UtcNow));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20.0,
+                3600,
+                800,
+                DateTime.UtcNow));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                DateTime.UtcNow));
+
+        var filterResponse =
+            await _client.GetAsync(
+                "/api/activities?type=Run");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            filterResponse.StatusCode);
+
+        var filterResult =
+            await filterResponse.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(filterResult);
+
+        Assert.Equal(2, filterResult.TotalCount);
+        Assert.Equal(2, filterResult.Items.Count);
+
+        Assert.All(
+            filterResult.Items,
+            activity =>
+                Assert.Equal(
+                    "Run",
+                    activity.Type));
+    }
+
+    [Fact]
+    public async Task GetActivities_WithTypeFilterAndPagination_ShouldReturnCorrectResults()
+    {
+        await AuthenticateAsync(_client);
+
+        for (var i = 1; i <= 5; i++)
+        {
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    i,
+                    1800,
+                    300,
+                    DateTime.UtcNow.AddMinutes(i)));
+        }
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50,
+                7200,
+                1500,
+                DateTime.UtcNow));
+
+        var combinedResponse =
+            await _client.GetAsync(
+                "/api/activities?type=Run&page=2&pageSize=2");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            combinedResponse.StatusCode);
+
+        var combinedResult =
+            await combinedResponse.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(combinedResult);
+
+        Assert.Equal(2, combinedResult.Page);
+        Assert.Equal(2, combinedResult.PageSize);
+
+        Assert.Equal(5, combinedResult.TotalCount);
+        Assert.Equal(3, combinedResult.TotalPages);
+
+        Assert.Equal(2, combinedResult.Items.Count);
+
+        Assert.All(
+            combinedResult.Items,
+            activity =>
+                Assert.Equal(
+                    "Run",
+                    activity.Type));
+    }
+
+    [Fact]
+    public async Task GetActivities_WithPageSizeAboveMaximum_ShouldLimitTo100()
+    {
+        await AuthenticateAsync(_client);
+
+        var pageSizeResponse =
+            await _client.GetAsync(
+                "/api/activities?page=1&pageSize=500");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            pageSizeResponse.StatusCode);
+
+        var pageSizeResult =
+            await pageSizeResponse.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(pageSizeResult);
+
+        Assert.Equal(
+            100,
+            pageSizeResult.PageSize);
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithInvalidType_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var request = new CreateActivityRequest(
+            "InvalidActivityType",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        var problemDetails =
+            await response.Content
+                .ReadFromJsonAsync<ValidationProblemDetails>();
+
+        Assert.NotNull(problemDetails);
+
+        Assert.Equal(
+            400,
+            problemDetails.Status);
+
+        Assert.Equal(
+            "One or more validation errors occurred.",
+            problemDetails.Title);
+
+        Assert.True(
+            problemDetails.Errors.ContainsKey("Type"));
+
+        Assert.Contains(
+            "Activity type is not supported.",
+            problemDetails.Errors["Type"]);
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithNegativeDistance_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            -5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithZeroDuration_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            0,
+            300,
+            DateTime.UtcNow);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithNegativeCalories_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            1800,
+            -100,
+            DateTime.UtcNow);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateActivity_WithNegativeDistance_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var createResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createResponse.StatusCode);
+
+        var created =
+            await createResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(created);
+
+        var updateRequest =
+            new UpdateActivityRequest(
+                "Run",
+                -10,
+                1800,
+                300,
+                DateTime.UtcNow);
+
+        var response =
+            await _client.PutAsJsonAsync(
+                $"/api/activities/{created.Id}",
+                updateRequest);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivityStats_ShouldOnlyReturnCurrentUsersStatistics()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                DateTime.UtcNow));
+
+        await using var secondFactory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var secondClient =
+            secondFactory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        await secondClient.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                100.0,
+                10000,
+                5000,
+                DateTime.UtcNow));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/stats");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var stats =
+            await response.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            1,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            5.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            1800,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            300,
+            stats.TotalCalories);
+
+        Assert.Single(
+            stats.ActivitiesByType);
+
+        Assert.Equal(
+            1,
+            stats.ActivitiesByType["Run"]);
+
+        Assert.DoesNotContain(
+            "Ride",
+            stats.ActivitiesByType.Keys);
     }
 }

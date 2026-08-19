@@ -685,4 +685,107 @@ public class ActivityServiceTests
                 .HasKey(x => x.Id);
         }
     }
+
+    [Fact]
+    public async Task CreateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new CreateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithValidType_ShouldSucceed()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var result =
+            await service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.Equal(
+            "Run",
+            result.Type);
+    }
+
+    [Fact]
+    public async Task UpdateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+
+        var activity = new Activity(
+            user.Id,
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        db.Activities.Add(activity);
+
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new UpdateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UpdateAsync(
+                user.Id,
+                activity.Id,
+                request,
+                CancellationToken.None));
+    }
 }

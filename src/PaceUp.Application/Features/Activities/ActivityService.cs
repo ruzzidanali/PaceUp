@@ -107,25 +107,50 @@ public class ActivityService : IActivityService
     Guid userId,
     CancellationToken cancellationToken)
     {
-        var stats =
-            await _dbContext.Activities
+        var query =
+            _dbContext.Activities
                 .AsNoTracking()
-                .Where(x => x.UserId == userId)
-                .GroupBy(_ => 1)
-                .Select(group => new ActivityStatsResponse(
-                    group.Count(),
-                    group.Sum(x => x.Distance),
-                    group.Sum(x => x.DurationSeconds),
-                    group.Sum(x => x.Calories ?? 0)))
-                .FirstOrDefaultAsync(
+                .Where(x => x.UserId == userId);
+
+        var totalActivities =
+            await query.CountAsync(
+                cancellationToken);
+
+        var totalDistance =
+            await query.SumAsync(
+                x => x.Distance,
+                cancellationToken);
+
+        var totalDurationSeconds =
+            await query.SumAsync(
+                x => x.DurationSeconds,
+                cancellationToken);
+
+        var totalCalories =
+            await query
+                .SumAsync(
+                    x => x.Calories ?? 0,
                     cancellationToken);
 
-        return stats
-            ?? new ActivityStatsResponse(
-                0,
-                0,
-                0,
-                0);
+        var activitiesByType =
+            await query
+                .GroupBy(x => x.Type)
+                .Select(x => new
+                {
+                    Type = x.Key,
+                    Count = x.Count()
+                })
+                .ToDictionaryAsync(
+                    x => x.Type,
+                    x => x.Count,
+                    cancellationToken);
+
+        return new ActivityStatsResponse(
+            TotalActivities: totalActivities,
+            TotalDistance: totalDistance,
+            TotalDurationSeconds: totalDurationSeconds,
+            TotalCalories: totalCalories,
+            ActivitiesByType: activitiesByType);
     }
 
     public async Task<ActivityResponse?> UpdateAsync(

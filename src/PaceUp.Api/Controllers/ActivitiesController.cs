@@ -68,24 +68,24 @@ public class ActivitiesController : ControllerBase
     }
 
     [HttpGet]
-[ProducesResponseType(
+    [ProducesResponseType(
     typeof(PagedActivityResponse),
     StatusCodes.Status200OK)]
-public async Task<ActionResult<PagedActivityResponse>>
+    public async Task<ActionResult<PagedActivityResponse>>
     GetMine(
         [FromQuery] ActivityListRequest request,
         CancellationToken cancellationToken)
-{
-    var userId = User.GetUserId();
+    {
+        var userId = User.GetUserId();
 
-    var activities =
-        await _activityService.GetUserActivitiesAsync(
-            userId,
-            request,
-            cancellationToken);
+        var activities =
+            await _activityService.GetUserActivitiesAsync(
+                userId,
+                request,
+                cancellationToken);
 
-    return Ok(activities);
-}
+        return Ok(activities);
+    }
 
     [HttpGet("stats")]
     [ProducesResponseType(
