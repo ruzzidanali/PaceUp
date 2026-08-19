@@ -84,6 +84,32 @@ public class GoalsController : ControllerBase
         return Ok(goal);
     }
 
+    [HttpGet("{id:guid}/progress")]
+    [ProducesResponseType(
+    typeof(GoalProgressResponse),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(
+    StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<GoalProgressResponse>> GetProgress(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var progress =
+            await _goalService.GetGoalProgressAsync(
+                userId,
+                id,
+                cancellationToken);
+
+        if (progress is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(progress);
+    }
+
     [HttpPut("{id:guid}")]
     [ProducesResponseType(
         typeof(GoalResponse),

@@ -28,4 +28,10 @@ public interface IGoalService
         Guid userId,
         Guid goalId,
         CancellationToken cancellationToken);
+
+    Task<GoalProgressResponse?> GetGoalProgressAsync(
+        Guid userId,
+        Guid goalId,
+        CancellationToken cancellationToken
+    );
 }

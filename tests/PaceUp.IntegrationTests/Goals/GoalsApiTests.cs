@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.Application.DTOs.Goals;
 using PaceUp.IntegrationTests.Infrastructure;
+using PaceUp.Application.DTOs.Activities;
 
 namespace PaceUp.IntegrationTests.Goals;
 
@@ -402,5 +403,199 @@ public class GoalsApiTests
             new AuthenticationHeaderValue(
                 "Bearer",
                 authResponse.AccessToken);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_ShouldReturnDistanceProgress()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    50,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10,
+                1800,
+                300,
+                startDate.AddDays(1)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                15,
+                2400,
+                400,
+                startDate.AddDays(2)));
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            goal.Id,
+            progress.GoalId);
+
+        Assert.Equal(
+            "Distance",
+            progress.Type);
+
+        Assert.Equal(
+            50,
+            progress.Target);
+
+        Assert.Equal(
+            25,
+            progress.Current);
+
+        Assert.Equal(
+            25,
+            progress.Remaining);
+
+        Assert.Equal(
+            50,
+            progress.ProgressPercentage);
+
+        Assert.False(
+            progress.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_WhenCompleted_ShouldReturn100Percent()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    20,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                25,
+                3600,
+                500,
+                startDate.AddDays(1)));
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            25,
+            progress.Current);
+
+        Assert.Equal(
+            0,
+            progress.Remaining);
+
+        Assert.Equal(
+            100,
+            progress.ProgressPercentage);
+
+        Assert.True(
+            progress.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_WhenGoalBelongsToAnotherUser_ShouldReturnNotFound()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    50,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        using var secondClient =
+            _factory.CreateClient();
+
+        await AuthenticateAsync(secondClient);
+
+        var response =
+            await secondClient.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_WithoutToken_ShouldReturnUnauthorized()
+    {
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{Guid.NewGuid()}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 }

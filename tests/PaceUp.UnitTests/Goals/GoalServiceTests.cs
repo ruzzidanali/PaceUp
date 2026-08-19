@@ -3,6 +3,7 @@ using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.DTOs.Goals;
 using PaceUp.Application.Features.Goals;
 using PaceUp.Domain.Entities;
+using PaceUp.Domain.Constants;
 
 namespace PaceUp.UnitTests.Goals;
 
@@ -440,5 +441,333 @@ public class GoalServiceTests
             modelBuilder.Entity<Goal>()
                 .HasKey(x => x.Id);
         }
+    }
+
+    [Fact]
+    public async Task GetGoalProgressAsync_Distance_ShouldCalculateProgress()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "progress_user",
+            "progress@example.com",
+            "Progress User");
+
+        db.Users.Add(user);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var goal = new Goal(
+            user.Id,
+            GoalTypes.Distance,
+            50,
+            startDate,
+            endDate);
+
+        db.Goals.Add(goal);
+
+        db.Activities.AddRange(
+            new Activity(
+                user.Id,
+                "Run",
+                10,
+                1800,
+                300,
+                startDate.AddDays(1)),
+
+            new Activity(
+                user.Id,
+                "Run",
+                15,
+                2400,
+                400,
+                startDate.AddDays(3)),
+
+            // Outside goal period; must not count.
+            new Activity(
+                user.Id,
+                "Run",
+                100,
+                3600,
+                1000,
+                endDate.AddDays(1)));
+
+        await db.SaveChangesAsync();
+
+        var service = new GoalService(db);
+
+        var result =
+            await service.GetGoalProgressAsync(
+                user.Id,
+                goal.Id,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(25, result.Current);
+        Assert.Equal(50, result.Target);
+        Assert.Equal(25, result.Remaining);
+        Assert.Equal(50, result.ProgressPercentage);
+        Assert.False(result.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgressAsync_Duration_ShouldCalculateProgress()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "duration_user",
+            "duration@example.com",
+            "Duration User");
+
+        db.Users.Add(user);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var goal = new Goal(
+            user.Id,
+            GoalTypes.Duration,
+            3600,
+            startDate,
+            endDate);
+
+        db.Goals.Add(goal);
+
+        db.Activities.AddRange(
+            new Activity(
+                user.Id,
+                "Run",
+                5,
+                1200,
+                300,
+                startDate.AddDays(1)),
+
+            new Activity(
+                user.Id,
+                "Ride",
+                10,
+                900,
+                400,
+                startDate.AddDays(2)));
+
+        await db.SaveChangesAsync();
+
+        var service = new GoalService(db);
+
+        var result =
+            await service.GetGoalProgressAsync(
+                user.Id,
+                goal.Id,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(2100, result.Current);
+        Assert.Equal(3600, result.Target);
+        Assert.Equal(1500, result.Remaining);
+        Assert.Equal(
+            58.333333333333336,
+            result.ProgressPercentage,
+            precision: 10);
+
+        Assert.False(result.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgressAsync_Calories_ShouldIgnoreNullCalories()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "calorie_user",
+            "calorie@example.com",
+            "Calorie User");
+
+        db.Users.Add(user);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var goal = new Goal(
+            user.Id,
+            GoalTypes.Calories,
+            1000,
+            startDate,
+            endDate);
+
+        db.Goals.Add(goal);
+
+        db.Activities.AddRange(
+            new Activity(
+                user.Id,
+                "Run",
+                5,
+                1800,
+                300,
+                startDate.AddDays(1)),
+
+            new Activity(
+                user.Id,
+                "Walk",
+                3,
+                1200,
+                null,
+                startDate.AddDays(2)),
+
+            new Activity(
+                user.Id,
+                "Ride",
+                20,
+                3600,
+                500,
+                startDate.AddDays(3)));
+
+        await db.SaveChangesAsync();
+
+        var service = new GoalService(db);
+
+        var result =
+            await service.GetGoalProgressAsync(
+                user.Id,
+                goal.Id,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(800, result.Current);
+        Assert.Equal(200, result.Remaining);
+        Assert.Equal(80, result.ProgressPercentage);
+        Assert.False(result.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgressAsync_Activities_ShouldCountActivities()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_goal_user",
+            "activitygoal@example.com",
+            "Activity Goal User");
+
+        db.Users.Add(user);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var goal = new Goal(
+            user.Id,
+            GoalTypes.Activities,
+            5,
+            startDate,
+            endDate);
+
+        db.Goals.Add(goal);
+
+        db.Activities.AddRange(
+            new Activity(
+                user.Id,
+                "Run",
+                5,
+                1800,
+                300,
+                startDate.AddDays(1)),
+
+            new Activity(
+                user.Id,
+                "Walk",
+                3,
+                1200,
+                150,
+                startDate.AddDays(2)),
+
+            new Activity(
+                user.Id,
+                "Ride",
+                20,
+                3600,
+                500,
+                startDate.AddDays(3)),
+
+            new Activity(
+                user.Id,
+                "Run",
+                5,
+                1800,
+                300,
+                startDate.AddDays(4)),
+
+            new Activity(
+                user.Id,
+                "Walk",
+                2,
+                900,
+                100,
+                startDate.AddDays(5)));
+
+        await db.SaveChangesAsync();
+
+        var service = new GoalService(db);
+
+        var result =
+            await service.GetGoalProgressAsync(
+                user.Id,
+                goal.Id,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(5, result.Current);
+        Assert.Equal(5, result.Target);
+        Assert.Equal(0, result.Remaining);
+        Assert.Equal(100, result.ProgressPercentage);
+        Assert.True(result.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgressAsync_WhenGoalBelongsToAnotherUser_ShouldReturnNull()
+    {
+        using var db = CreateDatabase();
+
+        var owner = new User(
+            "progress_owner",
+            "owner@example.com",
+            "Owner");
+
+        var otherUser = new User(
+            "progress_other",
+            "other@example.com",
+            "Other");
+
+        db.Users.AddRange(
+            owner,
+            otherUser);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var goal = new Goal(
+            owner.Id,
+            GoalTypes.Distance,
+            50,
+            startDate,
+            endDate);
+
+        db.Goals.Add(goal);
+
+        await db.SaveChangesAsync();
+
+        var service = new GoalService(db);
+
+        var result =
+            await service.GetGoalProgressAsync(
+                otherUser.Id,
+                goal.Id,
+                CancellationToken.None);
+
+        Assert.Null(result);
     }
 }
