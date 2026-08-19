@@ -77,6 +77,72 @@ public class UsersApiTests
     }
 
     [Fact]
+    public async Task UpdateMyProfile_ShouldReturnUpdatedUser()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var request =
+            new UpdateProfileRequest(
+                "Updated Name",
+                "Updated bio");
+
+        var response =
+            await client.PutAsJsonAsync(
+                "/api/users/me",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var user =
+            await response.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+
+        Assert.Equal(
+            "Updated Name",
+            user.DisplayName);
+
+        Assert.Equal(
+            "Updated bio",
+            user.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateMyProfile_WithEmptyDisplayName_ShouldReturnBadRequest()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var request =
+            new UpdateProfileRequest(
+                "",
+                "Updated bio");
+
+        var response =
+            await client.PutAsJsonAsync(
+                "/api/users/me",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetUser_ShouldReturnExistingUser()
     {
         await using var factory =

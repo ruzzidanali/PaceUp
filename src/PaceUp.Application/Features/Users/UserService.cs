@@ -81,4 +81,29 @@ public class UserService : IUserService
             user.ProfileImageUrl,
             user.CreatedAt);
     }
+
+    public async Task<UserResponse?> UpdateProfileAsync(
+    Guid userId,
+    UpdateProfileRequest request,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Id == userId,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.UpdateProfile(
+            request.DisplayName,
+            request.Bio);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return Map(user);
+    }
 }
