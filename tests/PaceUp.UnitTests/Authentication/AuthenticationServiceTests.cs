@@ -9,6 +9,23 @@ using PaceUp.Infrastructure.Authentication;
 
 namespace PaceUp.UnitTests.Authentication;
 
+public class FakeEmailVerificationTokenService
+    : IEmailVerificationTokenService
+{
+    private readonly string _token;
+
+    public FakeEmailVerificationTokenService(
+        string token)
+    {
+        _token = token;
+    }
+
+    public string GenerateToken()
+    {
+        return _token;
+    }
+}
+
 public class AuthenticationServiceTests
 {
     [Fact]
@@ -23,11 +40,16 @@ public class AuthenticationServiceTests
         var tokenService =
     new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         var request = new RegisterRequest(
             "ruzzidan",
@@ -87,11 +109,16 @@ public class AuthenticationServiceTests
         var tokenService =
     new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         var registerRequest = new RegisterRequest(
             "login_user",
@@ -137,11 +164,16 @@ public class AuthenticationServiceTests
         var tokenService =
     new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -174,11 +206,16 @@ public class AuthenticationServiceTests
         var tokenService =
     new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -211,11 +248,16 @@ public class AuthenticationServiceTests
         var tokenService =
     new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -269,12 +311,18 @@ public class AuthenticationServiceTests
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();
 
+        public DbSet<EmailVerificationToken> EmailVerificationTokens =>
+            Set<EmailVerificationToken>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<UserIdentity>()
                 .HasKey(x => x.UserId);
+
+            modelBuilder.Entity<EmailVerificationToken>()
+                .HasKey(x => x.Id);
         }
     }
 
@@ -306,11 +354,16 @@ public class AuthenticationServiceTests
 
         await db.SaveChangesAsync();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -366,11 +419,16 @@ public class AuthenticationServiceTests
 
         await db.SaveChangesAsync();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -396,11 +454,16 @@ public class AuthenticationServiceTests
         var tokenService =
             new FakeJwtTokenService();
 
+        var emailVerificationTokenService =
+    new FakeEmailVerificationTokenService(
+        "test-verification-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
-                tokenService);
+                tokenService,
+                emailVerificationTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -412,5 +475,54 @@ public class AuthenticationServiceTests
                 Guid.NewGuid(),
                 request,
                 CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldCreateEmailVerificationToken()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var tokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var jwtTokenService =
+            new FakeJwtTokenService();
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                jwtTokenService,
+                tokenService);
+
+        var request = new RegisterRequest(
+            "verification_user",
+            "verification@example.com",
+            "Verification User",
+            "Password123!");
+
+        var result =
+            await service.RegisterAsync(
+                request,
+                CancellationToken.None);
+
+        var token =
+            await db.EmailVerificationTokens
+                .SingleAsync(
+                    x => x.UserId == result.UserId);
+
+        Assert.Equal(
+            "test-verification-token",
+            token.Token);
+
+        Assert.True(
+            token.ExpiresAt > DateTime.UtcNow);
+
+        Assert.False(token.IsUsed());
     }
 }

@@ -13,14 +13,19 @@ public class AuthenticationService : IAuthenticationService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
 
+    private readonly IEmailVerificationTokenService _emailVerificationTokenService;
+
     public AuthenticationService(
-        IApplicationDbContext dbContext,
-        IPasswordHasher passwordHasher,
-        IJwtTokenService jwtTokenService)
+IApplicationDbContext dbContext,
+IPasswordHasher passwordHasher,
+IJwtTokenService jwtTokenService,
+IEmailVerificationTokenService emailVerificationTokenService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _emailVerificationTokenService =
+            emailVerificationTokenService;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -61,8 +66,19 @@ public class AuthenticationService : IAuthenticationService
             user.Id,
             passwordHash);
 
+        var verificationToken =
+    _emailVerificationTokenService.GenerateToken();
+
+        var emailVerificationToken =
+            new EmailVerificationToken(
+                user.Id,
+                verificationToken,
+                DateTime.UtcNow.AddHours(24));
+
         _dbContext.Users.Add(user);
         _dbContext.UserIdentities.Add(identity);
+        _dbContext.EmailVerificationTokens.Add(
+    emailVerificationToken);
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
@@ -171,5 +187,55 @@ public class AuthenticationService : IAuthenticationService
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
+    }
+
+    public async Task<EmailVerificationResponse> VerifyEmailAsync(
+    string token,
+    CancellationToken cancellationToken)
+    {
+        var verificationToken =
+            await _dbContext.EmailVerificationTokens
+                .FirstOrDefaultAsync(
+                    x => x.Token == token,
+                    cancellationToken);
+
+        if (verificationToken is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid email verification token.");
+        }
+
+        if (verificationToken.IsUsed())
+        {
+            throw new ConflictException(
+                "Email verification token has already been used.");
+        }
+
+        if (verificationToken.IsExpired())
+        {
+            throw new UnauthorizedAccessException(
+                "Email verification token has expired.");
+        }
+
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == verificationToken.UserId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to verify email.");
+        }
+
+        identity.VerifyEmail();
+
+        verificationToken.MarkAsUsed();
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return new EmailVerificationResponse(true);
     }
 }

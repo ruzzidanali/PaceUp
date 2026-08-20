@@ -168,6 +168,9 @@ public class UserServiceTests
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<EmailVerificationToken> EmailVerificationTokens =>
+            Set<EmailVerificationToken>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -178,6 +181,9 @@ public class UserServiceTests
                 .HasKey(x => x.UserId);
 
             modelBuilder.Entity<Activity>()
+                .HasKey(x => x.Id);
+
+            modelBuilder.Entity<EmailVerificationToken>()
                 .HasKey(x => x.Id);
         }
     }

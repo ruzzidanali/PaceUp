@@ -33,6 +33,8 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
+        services.AddScoped<IEmailVerificationTokenService,EmailVerificationTokenService>();
+
         return services;
     }
 }

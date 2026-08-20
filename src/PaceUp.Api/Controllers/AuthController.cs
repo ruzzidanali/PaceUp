@@ -61,4 +61,20 @@ public class AuthController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("verify-email")]
+    [ProducesResponseType(
+    typeof(EmailVerificationResponse),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<EmailVerificationResponse>> VerifyEmail(
+    [FromBody] VerifyEmailRequest request,
+    CancellationToken cancellationToken)
+    {
+        var result =
+            await _authenticationService.VerifyEmailAsync(
+                request.Token,
+                cancellationToken);
+
+        return Ok(result);
+    }
 }

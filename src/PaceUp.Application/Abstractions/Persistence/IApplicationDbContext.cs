@@ -13,6 +13,8 @@ public interface IApplicationDbContext
 
     DbSet<Goal> Goals { get; }
 
+    DbSet<EmailVerificationToken> EmailVerificationTokens { get; }
+
     Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default);
 }

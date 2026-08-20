@@ -426,6 +426,9 @@ public class GoalServiceTests
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
+        public DbSet<EmailVerificationToken> EmailVerificationTokens =>
+            Set<EmailVerificationToken>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -439,6 +442,9 @@ public class GoalServiceTests
                 .HasKey(x => x.Id);
 
             modelBuilder.Entity<Goal>()
+                .HasKey(x => x.Id);
+
+            modelBuilder.Entity<EmailVerificationToken>()
                 .HasKey(x => x.Id);
         }
     }

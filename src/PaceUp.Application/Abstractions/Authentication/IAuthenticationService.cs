@@ -16,4 +16,8 @@ public interface IAuthenticationService
         Guid userId,
         ChangePasswordRequest request,
         CancellationToken cancellationToken);
+
+    Task<EmailVerificationResponse> VerifyEmailAsync(
+        string token,
+        CancellationToken cancellationToken);
 }
