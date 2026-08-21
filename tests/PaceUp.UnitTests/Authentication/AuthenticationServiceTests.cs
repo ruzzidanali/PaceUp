@@ -120,6 +120,240 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_WithWrongPassword_ShouldIncrementFailedLoginAttempts()
+    {
+        await using var db = CreateDatabase();
+
+        var passwordHasher = new Argon2PasswordHasher();
+        var tokenService = new FakeJwtTokenService();
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service = new AuthenticationService(
+            db,
+            passwordHasher,
+            tokenService,
+            emailVerificationTokenService,
+            passwordResetTokenService);
+
+        var registerRequest = new RegisterRequest(
+            "failed_login_user",
+            "failed_login@example.com",
+            "Failed Login User",
+            "Password123!");
+
+        await service.RegisterAsync(
+            registerRequest,
+            CancellationToken.None);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.LoginAsync(
+                new LoginRequest(
+                    registerRequest.Email,
+                    "WrongPassword!"),
+                CancellationToken.None));
+
+        var identity =
+            await db.UserIdentities
+                .SingleAsync();
+
+        Assert.Equal(
+            1,
+            identity.FailedLoginAttempts);
+
+        Assert.Null(identity.LockedUntil);
+    }
+
+    [Fact]
+    public async Task LoginAsync_AfterFiveFailedAttempts_ShouldLockAccount()
+    {
+        await using var db = CreateDatabase();
+
+        var passwordHasher = new Argon2PasswordHasher();
+        var tokenService = new FakeJwtTokenService();
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service = new AuthenticationService(
+            db,
+            passwordHasher,
+            tokenService,
+            emailVerificationTokenService,
+            passwordResetTokenService);
+
+        var registerRequest = new RegisterRequest(
+            "lockout_user",
+            "lockout@example.com",
+            "Lockout User",
+            "Password123!");
+
+        await service.RegisterAsync(
+            registerRequest,
+            CancellationToken.None);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => service.LoginAsync(
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"),
+                    CancellationToken.None));
+        }
+
+        var identity =
+            await db.UserIdentities
+                .SingleAsync();
+
+        Assert.Equal(
+            5,
+            identity.FailedLoginAttempts);
+
+        Assert.NotNull(identity.LockedUntil);
+        Assert.True(
+            identity.LockedUntil > DateTime.UtcNow);
+    }
+    [Fact]
+    public async Task LoginAsync_WhenAccountIsLocked_ShouldRejectCorrectPassword()
+    {
+        await using var db = CreateDatabase();
+
+        var passwordHasher = new Argon2PasswordHasher();
+        var tokenService = new FakeJwtTokenService();
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service = new AuthenticationService(
+            db,
+            passwordHasher,
+            tokenService,
+            emailVerificationTokenService,
+            passwordResetTokenService);
+
+        var registerRequest = new RegisterRequest(
+            "locked_correct_password",
+            "locked_correct@example.com",
+            "Locked Correct Password",
+            "Password123!");
+
+        var result =
+            await service.RegisterAsync(
+                registerRequest,
+                CancellationToken.None);
+
+        var identity =
+            await db.UserIdentities
+                .SingleAsync(
+                    x => x.UserId == result.UserId);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => service.LoginAsync(
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"),
+                    CancellationToken.None));
+        }
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.LoginAsync(
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithCorrectPassword_ShouldResetFailedLoginAttempts()
+    {
+        await using var db = CreateDatabase();
+
+        var passwordHasher = new Argon2PasswordHasher();
+        var tokenService = new FakeJwtTokenService();
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service = new AuthenticationService(
+            db,
+            passwordHasher,
+            tokenService,
+            emailVerificationTokenService,
+            passwordResetTokenService);
+
+        var registerRequest = new RegisterRequest(
+            "reset_failed_attempts",
+            "reset_failed@example.com",
+            "Reset Failed Attempts",
+            "Password123!");
+
+        var result =
+            await service.RegisterAsync(
+                registerRequest,
+                CancellationToken.None);
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => service.LoginAsync(
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"),
+                    CancellationToken.None));
+        }
+
+        var identityBeforeLogin =
+            await db.UserIdentities
+                .SingleAsync(
+                    x => x.UserId == result.UserId);
+
+        Assert.Equal(
+            3,
+            identityBeforeLogin.FailedLoginAttempts);
+
+        var loginResult =
+            await service.LoginAsync(
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password),
+                CancellationToken.None);
+
+        Assert.NotNull(loginResult);
+
+        var identityAfterLogin =
+            await db.UserIdentities
+                .SingleAsync(
+                    x => x.UserId == result.UserId);
+
+        Assert.Equal(
+            0,
+            identityAfterLogin.FailedLoginAttempts);
+
+        Assert.Null(
+            identityAfterLogin.LockedUntil);
+    }
+
+    [Fact]
     public async Task LoginAsync_WithCorrectPassword_ShouldSucceed()
     {
         await using var db =

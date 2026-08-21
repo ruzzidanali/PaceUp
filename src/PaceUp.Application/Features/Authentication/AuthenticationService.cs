@@ -125,6 +125,12 @@ public class AuthenticationService : IAuthenticationService
                 "Invalid email or password.");
         }
 
+        if (identity.IsLocked())
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid email or password.");
+        }
+
         var passwordValid =
             _passwordHasher.Verify(
                 request.Password,
@@ -132,9 +138,19 @@ public class AuthenticationService : IAuthenticationService
 
         if (!passwordValid)
         {
+            identity.RecordFailedLogin();
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
+
             throw new UnauthorizedAccessException(
                 "Invalid email or password.");
         }
+
+        identity.ResetFailedLogins();
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
 
         var accessToken =
             _jwtTokenService.GenerateAccessToken(

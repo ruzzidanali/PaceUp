@@ -24,6 +24,11 @@ public class UserIdentityConfiguration
         builder.Property(x => x.EmailVerified)
             .IsRequired();
 
+        builder.Property(x => x.FailedLoginAttempts)
+    .IsRequired();
+
+        builder.Property(x => x.LockedUntil);
+
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 

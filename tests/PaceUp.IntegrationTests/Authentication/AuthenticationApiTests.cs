@@ -1056,4 +1056,96 @@ public class AuthenticationApiTests
             response.StatusCode);
     }
 
+    [Fact]
+    public async Task Login_AfterFiveFailedAttempts_ShouldLockAccount()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"lockout_api_{uniqueId}",
+            $"lockout_api_{uniqueId}@example.com",
+            "Lockout API User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/auth/login",
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"));
+
+            Assert.Equal(
+                HttpStatusCode.Unauthorized,
+                response.StatusCode);
+        }
+
+        var correctPasswordResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            correctPasswordResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_WithCorrectPassword_ShouldResetFailedLoginAttempts()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"reset_lockout_{uniqueId}",
+            $"reset_lockout_{uniqueId}@example.com",
+            "Reset Lockout User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/auth/login",
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"));
+
+            Assert.Equal(
+                HttpStatusCode.Unauthorized,
+                response.StatusCode);
+        }
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+    }
+
 }

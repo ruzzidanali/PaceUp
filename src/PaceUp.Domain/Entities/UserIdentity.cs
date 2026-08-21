@@ -10,6 +10,10 @@ public class UserIdentity
 
     public string SecurityStamp { get; private set; } = null!;
 
+    public int FailedLoginAttempts { get; private set; }
+
+    public DateTime? LockedUntil { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     public DateTime? UpdatedAt { get; private set; }
@@ -42,5 +46,27 @@ public class UserIdentity
     {
         EmailVerified = true;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool IsLocked()
+    {
+        return LockedUntil.HasValue &&
+               LockedUntil.Value > DateTime.UtcNow;
+    }
+
+    public void RecordFailedLogin()
+    {
+        FailedLoginAttempts++;
+
+        if (FailedLoginAttempts >= 5)
+        {
+            LockedUntil = DateTime.UtcNow.AddMinutes(15);
+        }
+    }
+
+    public void ResetFailedLogins()
+    {
+        FailedLoginAttempts = 0;
+        LockedUntil = null;
     }
 }
