@@ -56,46 +56,101 @@ public class ActivityService : IActivityService
             : Map(activity);
     }
 
-    public async Task<IReadOnlyList<ActivityResponse>>
-        GetUserActivitiesAsync(
-            Guid userId,
-            CancellationToken cancellationToken)
+    public async Task<PagedActivityResponse> GetUserActivitiesAsync(
+    Guid userId,
+    ActivityListRequest request,
+    CancellationToken cancellationToken)
     {
-        var activities =
-            await _dbContext.Activities
+        var page =
+            Math.Max(request.Page, 1);
+
+        var pageSize =
+            Math.Clamp(request.PageSize, 1, 100);
+
+        var query =
+            _dbContext.Activities
                 .AsNoTracking()
-                .Where(x => x.UserId == userId)
+                .Where(x => x.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(request.Type))
+        {
+            query = query.Where(
+                x => x.Type == request.Type);
+        }
+
+        var totalCount =
+            await query.CountAsync(
+                cancellationToken);
+
+        var activities =
+            await query
                 .OrderByDescending(x => x.StartedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-        return activities
-            .Select(Map)
-            .ToList();
+        var totalPages =
+            totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(
+                    totalCount / (double)pageSize);
+
+        return new PagedActivityResponse(
+            activities.Select(Map).ToList(),
+            page,
+            pageSize,
+            totalCount,
+            totalPages);
     }
 
     public async Task<ActivityStatsResponse> GetStatsAsync(
     Guid userId,
     CancellationToken cancellationToken)
     {
-        var stats =
-            await _dbContext.Activities
+        var query =
+            _dbContext.Activities
                 .AsNoTracking()
-                .Where(x => x.UserId == userId)
-                .GroupBy(_ => 1)
-                .Select(group => new ActivityStatsResponse(
-                    group.Count(),
-                    group.Sum(x => x.Distance),
-                    group.Sum(x => x.DurationSeconds),
-                    group.Sum(x => x.Calories ?? 0)))
-                .FirstOrDefaultAsync(
+                .Where(x => x.UserId == userId);
+
+        var totalActivities =
+            await query.CountAsync(
+                cancellationToken);
+
+        var totalDistance =
+            await query.SumAsync(
+                x => x.Distance,
+                cancellationToken);
+
+        var totalDurationSeconds =
+            await query.SumAsync(
+                x => x.DurationSeconds,
+                cancellationToken);
+
+        var totalCalories =
+            await query
+                .SumAsync(
+                    x => x.Calories ?? 0,
                     cancellationToken);
 
-        return stats
-            ?? new ActivityStatsResponse(
-                0,
-                0,
-                0,
-                0);
+        var activitiesByType =
+            await query
+                .GroupBy(x => x.Type)
+                .Select(x => new
+                {
+                    Type = x.Key,
+                    Count = x.Count()
+                })
+                .ToDictionaryAsync(
+                    x => x.Type,
+                    x => x.Count,
+                    cancellationToken);
+
+        return new ActivityStatsResponse(
+            TotalActivities: totalActivities,
+            TotalDistance: totalDistance,
+            TotalDurationSeconds: totalDurationSeconds,
+            TotalCalories: totalCalories,
+            ActivitiesByType: activitiesByType);
     }
 
     public async Task<ActivityResponse?> UpdateAsync(

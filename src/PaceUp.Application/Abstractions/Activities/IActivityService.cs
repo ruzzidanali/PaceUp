@@ -14,8 +14,9 @@ public interface IActivityService
         Guid activityId,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<ActivityResponse>> GetUserActivitiesAsync(
+    Task<PagedActivityResponse> GetUserActivitiesAsync(
         Guid userId,
+        ActivityListRequest request,
         CancellationToken cancellationToken);
 
     Task<ActivityStatsResponse> GetStatsAsync(

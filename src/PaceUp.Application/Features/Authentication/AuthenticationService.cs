@@ -12,15 +12,21 @@ public class AuthenticationService : IAuthenticationService
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IPasswordResetTokenService _passwordResetTokenService;
+    private readonly IEmailVerificationTokenService _emailVerificationTokenService;
 
     public AuthenticationService(
         IApplicationDbContext dbContext,
         IPasswordHasher passwordHasher,
-        IJwtTokenService jwtTokenService)
+        IJwtTokenService jwtTokenService,
+        IEmailVerificationTokenService emailVerificationTokenService,
+        IPasswordResetTokenService passwordResetTokenService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _emailVerificationTokenService = emailVerificationTokenService;
+        _passwordResetTokenService = passwordResetTokenService;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -61,8 +67,19 @@ public class AuthenticationService : IAuthenticationService
             user.Id,
             passwordHash);
 
+        var verificationToken =
+    _emailVerificationTokenService.GenerateToken();
+
+        var emailVerificationToken =
+            new EmailVerificationToken(
+                user.Id,
+                verificationToken,
+                DateTime.UtcNow.AddHours(24));
+
         _dbContext.Users.Add(user);
         _dbContext.UserIdentities.Add(identity);
+        _dbContext.EmailVerificationTokens.Add(
+    emailVerificationToken);
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
@@ -132,5 +149,244 @@ public class AuthenticationService : IAuthenticationService
             user.DisplayName,
             accessToken,
             _jwtTokenService.GetAccessTokenExpiration());
+    }
+
+    public async Task ChangePasswordAsync(
+    Guid userId,
+    ChangePasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == userId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid user.");
+        }
+
+        var currentPasswordValid =
+            _passwordHasher.Verify(
+                request.CurrentPassword,
+                identity.PasswordHash);
+
+        if (!currentPasswordValid)
+        {
+            throw new UnauthorizedAccessException(
+                "Current password is incorrect.");
+        }
+
+        var newPasswordHash =
+            _passwordHasher.Hash(
+                request.NewPassword);
+
+        identity.UpdatePassword(
+            newPasswordHash);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task ResendVerificationAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Id == userId,
+                cancellationToken);
+
+        if (user is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to resend email verification.");
+        }
+
+        var identity = await _dbContext.UserIdentities
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId,
+                cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to resend email verification.");
+        }
+
+        if (identity.EmailVerified)
+        {
+            throw new ConflictException(
+                "Email is already verified.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        var existingTokens =
+            await _dbContext.EmailVerificationTokens
+                .Where(
+                    x =>
+                        x.UserId == userId &&
+                        x.ExpiresAt > now &&
+                        x.UsedAt == null)
+                .ToListAsync(
+                    cancellationToken);
+
+        foreach (var existingToken in existingTokens)
+        {
+            existingToken.Expire();
+        }
+
+        var token =
+            _emailVerificationTokenService.GenerateToken();
+
+        var verificationToken =
+            new EmailVerificationToken(
+                userId,
+                token,
+                DateTime.UtcNow.AddHours(24));
+
+        _dbContext.EmailVerificationTokens.Add(
+            verificationToken);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
+
+    public async Task<EmailVerificationResponse> VerifyEmailAsync(
+    string token,
+    CancellationToken cancellationToken)
+    {
+        var verificationToken =
+            await _dbContext.EmailVerificationTokens
+                .FirstOrDefaultAsync(
+                    x => x.Token == token,
+                    cancellationToken);
+
+        if (verificationToken is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid email verification token.");
+        }
+
+        if (verificationToken.IsUsed())
+        {
+            throw new ConflictException(
+                "Email verification token has already been used.");
+        }
+
+        if (verificationToken.IsExpired())
+        {
+            throw new UnauthorizedAccessException(
+                "Email verification token has expired.");
+        }
+
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == verificationToken.UserId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to verify email.");
+        }
+
+        identity.VerifyEmail();
+
+        verificationToken.MarkAsUsed();
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return new EmailVerificationResponse(true);
+    }
+
+    public async Task ForgotPasswordAsync(
+    string email,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Email == email,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return;
+        }
+
+        var token =
+            _passwordResetTokenService.GenerateToken();
+
+        var resetToken =
+            new PasswordResetToken(
+                user.Id,
+                token,
+                DateTime.UtcNow.AddHours(1));
+
+        _dbContext.PasswordResetTokens.Add(resetToken);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task<PasswordResetResponse> ResetPasswordAsync(
+    ResetPasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var resetToken =
+            await _dbContext.PasswordResetTokens
+                .FirstOrDefaultAsync(
+                    x => x.Token == request.Token,
+                    cancellationToken);
+
+        if (resetToken is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid password reset token.");
+        }
+
+        if (resetToken.IsUsed())
+        {
+            throw new ConflictException(
+                "Password reset token has already been used.");
+        }
+
+        if (resetToken.IsExpired())
+        {
+            throw new UnauthorizedAccessException(
+                "Password reset token has expired.");
+        }
+
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == resetToken.UserId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to reset password.");
+        }
+
+        var passwordHash =
+            _passwordHasher.Hash(
+                request.NewPassword);
+
+        identity.UpdatePassword(
+            passwordHash);
+
+        resetToken.MarkAsUsed();
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return new PasswordResetResponse(true);
     }
 }

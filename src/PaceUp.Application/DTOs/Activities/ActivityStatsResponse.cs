@@ -4,4 +4,5 @@ public record ActivityStatsResponse(
     int TotalActivities,
     double TotalDistance,
     int TotalDurationSeconds,
-    int TotalCalories);
+    int TotalCalories,
+    IReadOnlyDictionary<string, int> ActivitiesByType);

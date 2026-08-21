@@ -33,6 +33,13 @@ public class GlobalExceptionHandler : IExceptionHandler
                 "Unauthorized request: {Message}",
                 exception.Message);
         }
+        else if (exception is ArgumentException)
+        {
+            _logger.LogWarning(
+                exception,
+                "Invalid request: {Message}",
+                exception.Message);
+        }
         else
         {
             _logger.LogError(
@@ -48,6 +55,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             UnauthorizedAccessException =>
                 StatusCodes.Status401Unauthorized,
 
+            ArgumentException =>
+                StatusCodes.Status400BadRequest,
+
             _ =>
                 StatusCodes.Status500InternalServerError
         };
@@ -59,6 +69,9 @@ public class GlobalExceptionHandler : IExceptionHandler
 
             UnauthorizedAccessException =>
                 "Unauthorized",
+
+            ArgumentException =>
+                "Invalid request",
 
             _ =>
                 "An unexpected error occurred."

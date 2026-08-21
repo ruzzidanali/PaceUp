@@ -600,27 +600,46 @@ public class ActivityServiceTests
         var service = new ActivityService(db);
 
         var results =
-            await service.GetUserActivitiesAsync(
-                user.Id,
-                CancellationToken.None);
+    await service.GetUserActivitiesAsync(
+        user.Id,
+        new ActivityListRequest(
+            Page: 1,
+            PageSize: 20),
+        CancellationToken.None);
+
+        Assert.Equal(
+    2,
+    results.TotalCount);
+
+        Assert.Equal(
+            1,
+            results.Page);
+
+        Assert.Equal(
+            20,
+            results.PageSize);
+
+        Assert.Equal(
+            1,
+            results.TotalPages);
 
         Assert.Equal(
             2,
-            results.Count);
+            results.Items.Count);
 
         Assert.All(
-            results,
-            x => Assert.Equal(
-                user.Id,
-                x.UserId));
+    results.Items,
+    x => Assert.Equal(
+        user.Id,
+        x.UserId));
 
         Assert.Equal(
-            secondActivity.Id,
-            results[0].Id);
+    secondActivity.Id,
+    results.Items[0].Id);
 
         Assert.Equal(
             firstActivity.Id,
-            results[1].Id);
+            results.Items[1].Id);
     }
 
     private static TestDbContext CreateDatabase()
@@ -650,20 +669,135 @@ public class ActivityServiceTests
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();
 
+        public DbSet<Goal> Goals =>
+            Set<Goal>();
+
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<EmailVerificationToken> EmailVerificationTokens =>
+            Set<EmailVerificationToken>();
+
+        public DbSet<PasswordResetToken> PasswordResetTokens =>
+            Set<PasswordResetToken>();
+
         protected override void OnModelCreating(
-    ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<User>()
-                .HasKey(x => x.Id);
+            ModelBuilder modelBuilder)
+            {
+                modelBuilder.Entity<User>()
+                    .HasKey(x => x.Id);
 
-            modelBuilder.Entity<UserIdentity>()
-                .HasKey(x => x.UserId);
+                modelBuilder.Entity<UserIdentity>()
+                    .HasKey(x => x.UserId);
 
-            modelBuilder.Entity<Activity>()
-                .HasKey(x => x.Id);
-        }
+                modelBuilder.Entity<Activity>()
+                    .HasKey(x => x.Id);
+
+                modelBuilder.Entity<EmailVerificationToken>()
+                    .HasKey(x => x.Id);
+            }
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new CreateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithValidType_ShouldSucceed()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var result =
+            await service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.Equal(
+            "Run",
+            result.Type);
+    }
+
+    [Fact]
+    public async Task UpdateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+
+        var activity = new Activity(
+            user.Id,
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        db.Activities.Add(activity);
+
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var request = new UpdateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UpdateAsync(
+                user.Id,
+                activity.Id,
+                request,
+                CancellationToken.None));
     }
 }

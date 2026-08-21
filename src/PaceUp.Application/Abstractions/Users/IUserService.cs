@@ -11,4 +11,14 @@ public interface IUserService
     Task<UserResponse?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken);
+
+    Task<UserResponse?> UpdateProfileAsync(
+        Guid userId,
+        UpdateProfileRequest request,
+        CancellationToken cancellationToken);
+
+    Task<UserResponse?> UpdateProfileImageAsync(
+        Guid userId,
+        UpdateProfileImageRequest request,
+        CancellationToken cancellationToken);
 }

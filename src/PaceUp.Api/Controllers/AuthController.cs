@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PaceUp.Api.Extensions;
 using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Application.DTOs.Authentication;
 
@@ -40,5 +42,87 @@ public class AuthController : ControllerBase
                 cancellationToken);
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword(
+    [FromBody] ChangePasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        await _authenticationService.ChangePasswordAsync(
+            userId,
+            request,
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("verify-email")]
+    [ProducesResponseType(
+    typeof(EmailVerificationResponse),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<EmailVerificationResponse>> VerifyEmail(
+    [FromBody] VerifyEmailRequest request,
+    CancellationToken cancellationToken)
+    {
+        var result =
+            await _authenticationService.VerifyEmailAsync(
+                request.Token,
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ForgotPassword(
+    [FromBody] ForgotPasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        await _authenticationService.ForgotPasswordAsync(
+            request.Email,
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [ProducesResponseType(
+        typeof(PasswordResetResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PasswordResetResponse>> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _authenticationService.ResetPasswordAsync(
+                request,
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("resend-verification")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResendVerification(
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        await _authenticationService.ResendVerificationAsync(
+            userId,
+            cancellationToken);
+
+        return NoContent();
     }
 }

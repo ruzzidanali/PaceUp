@@ -6,6 +6,8 @@ using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Application.Features.Authentication;
 using PaceUp.Application.Abstractions.Activities;
 using PaceUp.Application.Features.Activities;
+using PaceUp.Application.Abstractions.Goals;
+using PaceUp.Application.Features.Goals;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -22,6 +24,8 @@ public static class DependencyInjection
             typeof(DependencyInjection).Assembly);
 
         services.AddScoped<IActivityService, ActivityService>();
+
+        services.AddScoped<IGoalService, GoalService>();
 
         return services;
     }

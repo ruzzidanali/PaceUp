@@ -1,3 +1,5 @@
+using PaceUp.Domain.Constants;
+
 namespace PaceUp.Domain.Entities;
 
 public class Activity
@@ -25,13 +27,48 @@ public class Activity
     }
 
     public Activity(
-        Guid userId,
-        string type,
-        double distance,
-        int durationSeconds,
-        int? calories,
-        DateTime startedAt)
+    Guid userId,
+    string type,
+    double distance,
+    int durationSeconds,
+    int? calories,
+    DateTime startedAt)
     {
+        if (!ActivityTypes.IsValid(type))
+        {
+            throw new ArgumentException(
+                $"Unsupported activity type: {type}",
+                nameof(type));
+        }
+
+        if (!double.IsFinite(distance))
+        {
+            throw new ArgumentException(
+                "Distance must be a finite number.",
+                nameof(distance));
+        }
+
+        if (distance < 0)
+        {
+            throw new ArgumentException(
+                "Distance cannot be negative.",
+                nameof(distance));
+        }
+
+        if (durationSeconds <= 0)
+        {
+            throw new ArgumentException(
+                "Duration must be greater than zero.",
+                nameof(durationSeconds));
+        }
+
+        if (calories < 0)
+        {
+            throw new ArgumentException(
+                "Calories cannot be negative.",
+                nameof(calories));
+        }
+
         Id = Guid.NewGuid();
 
         UserId = userId;
@@ -51,6 +88,41 @@ public class Activity
     int? calories,
     DateTime startedAt)
     {
+        if (!ActivityTypes.IsValid(type))
+        {
+            throw new ArgumentException(
+                $"Unsupported activity type: {type}",
+                nameof(type));
+        }
+
+        if (!double.IsFinite(distance))
+        {
+            throw new ArgumentException(
+                "Distance must be a finite number.",
+                nameof(distance));
+        }
+
+        if (distance < 0)
+        {
+            throw new ArgumentException(
+                "Distance cannot be negative.",
+                nameof(distance));
+        }
+
+        if (durationSeconds <= 0)
+        {
+            throw new ArgumentException(
+                "Duration must be greater than zero.",
+                nameof(durationSeconds));
+        }
+
+        if (calories < 0)
+        {
+            throw new ArgumentException(
+                "Calories cannot be negative.",
+                nameof(calories));
+        }
+
         Type = type;
         Distance = distance;
         DurationSeconds = durationSeconds;
