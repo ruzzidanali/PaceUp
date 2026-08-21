@@ -25,6 +25,9 @@ public class PaceUpDbContext :
     public DbSet<EmailVerificationToken> EmailVerificationTokens =>
         Set<EmailVerificationToken>();
 
+    public DbSet<PasswordResetToken> PasswordResetTokens =>
+        Set<PasswordResetToken>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

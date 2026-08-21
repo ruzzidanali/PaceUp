@@ -543,6 +543,49 @@ public class AuthenticationApiTests
         return verificationToken.Token;
     }
 
+    private async Task<string> GetPasswordResetTokenAsync(
+    Guid userId)
+    {
+        using var scope =
+            _fixture.Factory.Services
+                .CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider
+                .GetRequiredService<PaceUpDbContext>();
+
+        var resetToken =
+            await dbContext.PasswordResetTokens
+                .SingleAsync(
+                    x => x.UserId == userId);
+
+        return resetToken.Token;
+    }
+
+    private async Task SetPasswordResetTokenExpiredAsync(
+    Guid userId,
+    string token)
+    {
+        using var scope =
+            _fixture.Factory.Services
+                .CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider
+                .GetRequiredService<PaceUpDbContext>();
+
+        var resetToken =
+            await dbContext.PasswordResetTokens
+                .SingleAsync(
+                    x =>
+                        x.UserId == userId &&
+                        x.Token == token);
+
+        resetToken.Expire();
+
+        await dbContext.SaveChangesAsync();
+    }
+
     private async Task SetTokenExpiredAsync(
     Guid userId,
     string token)
@@ -585,4 +628,260 @@ public class AuthenticationApiTests
 
         Assert.True(identity.EmailVerified);
     }
+
+    [Fact]
+    public async Task ForgotPassword_ShouldReturnNoContent()
+    {
+        var uniqueId =
+            Guid.NewGuid().ToString("N");
+
+        var registerRequest =
+            new RegisterRequest(
+                $"forgot_api_{uniqueId}",
+                $"forgot_api_{uniqueId}@example.com",
+                "Forgot API User",
+                "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/auth/forgot-password",
+                new ForgotPasswordRequest(
+                    registerRequest.Email));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_WithUnknownEmail_ShouldReturnNoContent()
+    {
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/auth/forgot-password",
+                new ForgotPasswordRequest(
+                    $"unknown_{Guid.NewGuid():N}@example.com"));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldChangePassword()
+    {
+        var uniqueId =
+            Guid.NewGuid().ToString("N");
+
+        var registerRequest =
+            new RegisterRequest(
+                $"reset_api_{uniqueId}",
+                $"reset_api_{uniqueId}@example.com",
+                "Reset API User",
+                "OldPassword123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var forgotPasswordResponse = await _client.PostAsJsonAsync("/api/auth/forgot-password",
+            new ForgotPasswordRequest(registerRequest.Email));
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            forgotPasswordResponse.StatusCode);
+
+        var token =
+            await GetPasswordResetTokenAsync(
+                authResponse.UserId);
+
+        var resetResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/reset-password",
+                new ResetPasswordRequest(
+                    token,
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            resetResponse.StatusCode);
+
+        var result =
+            await resetResponse.Content
+                .ReadFromJsonAsync<PasswordResetResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.True(
+            result.Reset);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithInvalidToken_ShouldReturnUnauthorized()
+    {
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/auth/reset-password",
+                new ResetPasswordRequest(
+                    "invalid-reset-token",
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithExpiredToken_ShouldReturnUnauthorized()
+    {
+        var uniqueId =
+            Guid.NewGuid().ToString("N");
+
+        var registerRequest =
+            new RegisterRequest(
+                $"expired_reset_api_{uniqueId}",
+                $"expired_reset_api_{uniqueId}@example.com",
+                "Expired Reset API User",
+                "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var forgotResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/forgot-password",
+                new ForgotPasswordRequest(
+                    registerRequest.Email));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            forgotResponse.StatusCode);
+
+        var token =
+            await GetPasswordResetTokenAsync(
+                authResponse.UserId);
+
+        await SetPasswordResetTokenExpiredAsync(
+            authResponse.UserId,
+            token);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/auth/reset-password",
+                new ResetPasswordRequest(
+                    token,
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithUsedToken_ShouldReturnConflict()
+    {
+        var uniqueId =
+            Guid.NewGuid().ToString("N");
+
+        var registerRequest =
+            new RegisterRequest(
+                $"used_reset_api_{uniqueId}",
+                $"used_reset_api_{uniqueId}@example.com",
+                "Used Reset API User",
+                "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var forgotResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/forgot-password",
+                new ForgotPasswordRequest(
+                    registerRequest.Email));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            forgotResponse.StatusCode);
+
+        var token =
+            await GetPasswordResetTokenAsync(
+                authResponse.UserId);
+
+        var firstResetResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/reset-password",
+                new ResetPasswordRequest(
+                    token,
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            firstResetResponse.StatusCode);
+
+        var secondResetResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/reset-password",
+                new ResetPasswordRequest(
+                    token,
+                    "AnotherPassword789!"));
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            secondResetResponse.StatusCode);
+    }
+
 }

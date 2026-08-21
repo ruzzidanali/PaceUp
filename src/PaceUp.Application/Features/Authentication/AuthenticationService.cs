@@ -12,20 +12,21 @@ public class AuthenticationService : IAuthenticationService
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
-
+    private readonly IPasswordResetTokenService _passwordResetTokenService;
     private readonly IEmailVerificationTokenService _emailVerificationTokenService;
 
     public AuthenticationService(
-IApplicationDbContext dbContext,
-IPasswordHasher passwordHasher,
-IJwtTokenService jwtTokenService,
-IEmailVerificationTokenService emailVerificationTokenService)
+        IApplicationDbContext dbContext,
+        IPasswordHasher passwordHasher,
+        IJwtTokenService jwtTokenService,
+        IEmailVerificationTokenService emailVerificationTokenService,
+        IPasswordResetTokenService passwordResetTokenService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
-        _emailVerificationTokenService =
-            emailVerificationTokenService;
+        _emailVerificationTokenService = emailVerificationTokenService;
+        _passwordResetTokenService = passwordResetTokenService;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -237,5 +238,89 @@ IEmailVerificationTokenService emailVerificationTokenService)
             cancellationToken);
 
         return new EmailVerificationResponse(true);
+    }
+
+    public async Task ForgotPasswordAsync(
+    string email,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Email == email,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return;
+        }
+
+        var token =
+            _passwordResetTokenService.GenerateToken();
+
+        var resetToken =
+            new PasswordResetToken(
+                user.Id,
+                token,
+                DateTime.UtcNow.AddHours(1));
+
+        _dbContext.PasswordResetTokens.Add(resetToken);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task<PasswordResetResponse> ResetPasswordAsync(
+    ResetPasswordRequest request,
+    CancellationToken cancellationToken)
+    {
+        var resetToken =
+            await _dbContext.PasswordResetTokens
+                .FirstOrDefaultAsync(
+                    x => x.Token == request.Token,
+                    cancellationToken);
+
+        if (resetToken is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid password reset token.");
+        }
+
+        if (resetToken.IsUsed())
+        {
+            throw new ConflictException(
+                "Password reset token has already been used.");
+        }
+
+        if (resetToken.IsExpired())
+        {
+            throw new UnauthorizedAccessException(
+                "Password reset token has expired.");
+        }
+
+        var identity =
+            await _dbContext.UserIdentities
+                .FirstOrDefaultAsync(
+                    x => x.UserId == resetToken.UserId,
+                    cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to reset password.");
+        }
+
+        var passwordHash =
+            _passwordHasher.Hash(
+                request.NewPassword);
+
+        identity.UpdatePassword(
+            passwordHash);
+
+        resetToken.MarkAsUsed();
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return new PasswordResetResponse(true);
     }
 }

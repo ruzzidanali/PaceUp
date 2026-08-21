@@ -20,4 +20,12 @@ public interface IAuthenticationService
     Task<EmailVerificationResponse> VerifyEmailAsync(
         string token,
         CancellationToken cancellationToken);
+
+    Task ForgotPasswordAsync(
+        string email,
+        CancellationToken cancellationToken);
+
+    Task<PasswordResetResponse> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken);
 }
