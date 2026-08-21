@@ -92,6 +92,7 @@ public class ActivitiesController : ControllerBase
     typeof(ActivityStatsResponse),
     StatusCodes.Status200OK)]
     public async Task<ActionResult<ActivityStatsResponse>> GetStats(
+    [FromQuery] ActivityListRequest request,
     CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
@@ -99,6 +100,7 @@ public class ActivitiesController : ControllerBase
         var stats =
             await _activityService.GetStatsAsync(
                 userId,
+                request,
                 cancellationToken);
 
         return Ok(stats);

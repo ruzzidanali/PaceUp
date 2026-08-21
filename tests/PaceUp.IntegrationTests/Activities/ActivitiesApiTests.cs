@@ -256,6 +256,202 @@ public class ActivitiesApiTests
     }
 
     [Fact]
+    public async Task GetActivityStats_WithDateRange_ShouldReturnStatisticsWithinRange()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(
+                    2026, 7, 25,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(
+                    2026, 8, 10,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20.0,
+                5400,
+                800,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Walk",
+                3.0,
+                1800,
+                150,
+                new DateTime(
+                    2026, 8, 20,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/stats" +
+                "?from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var stats =
+            await response.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            2,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            30.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            9000,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            1400,
+            stats.TotalCalories);
+
+        Assert.Equal(
+            2,
+            stats.ActivitiesByType.Count);
+
+        Assert.Equal(
+            1,
+            stats.ActivitiesByType["Run"]);
+
+        Assert.Equal(
+            1,
+            stats.ActivitiesByType["Ride"]);
+    }
+
+    [Fact]
+    public async Task GetActivityStats_WithTypeAndDateRange_ShouldReturnMatchingStatistics()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(
+                    2026, 8, 10,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50.0,
+                7200,
+                1200,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20.0,
+                5400,
+                900,
+                new DateTime(
+                    2026, 8, 20,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/stats" +
+                "?type=Run" +
+                "&from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var stats =
+            await response.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            2,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            15.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            5400,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            900,
+            stats.TotalCalories);
+
+        Assert.Single(
+            stats.ActivitiesByType);
+
+        Assert.Equal(
+            2,
+            stats.ActivitiesByType["Run"]);
+
+        Assert.DoesNotContain(
+            "Ride",
+            stats.ActivitiesByType.Keys);
+    }
+
+    [Fact]
     public async Task GetActivityStats_WithoutToken_ShouldReturnUnauthorized()
     {
         var response =

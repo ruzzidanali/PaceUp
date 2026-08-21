@@ -53,6 +53,7 @@ public class ActivityServiceTests
         var result =
             await service.GetStatsAsync(
                 user.Id,
+                new ActivityListRequest(),
                 CancellationToken.None);
 
         Assert.Equal(
@@ -115,6 +116,7 @@ public class ActivityServiceTests
         var result =
             await service.GetStatsAsync(
                 user.Id,
+                new ActivityListRequest(),
                 CancellationToken.None);
 
         Assert.Equal(

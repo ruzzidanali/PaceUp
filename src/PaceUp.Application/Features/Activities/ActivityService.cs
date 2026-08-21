@@ -117,12 +117,31 @@ public class ActivityService : IActivityService
 
     public async Task<ActivityStatsResponse> GetStatsAsync(
     Guid userId,
+    ActivityListRequest request,
     CancellationToken cancellationToken)
     {
         var query =
             _dbContext.Activities
                 .AsNoTracking()
                 .Where(x => x.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(request.Type))
+        {
+            query = query.Where(
+                x => x.Type == request.Type);
+        }
+
+        if (request.From.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt >= request.From.Value);
+        }
+
+        if (request.To.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt <= request.To.Value);
+        }
 
         var totalActivities =
             await query.CountAsync(

@@ -21,6 +21,7 @@ public interface IActivityService
 
     Task<ActivityStatsResponse> GetStatsAsync(
         Guid userId,
+        ActivityListRequest request,
         CancellationToken cancellationToken);
 
     Task<ActivityResponse?> UpdateAsync(
