@@ -78,6 +78,18 @@ public class ActivityService : IActivityService
                 x => x.Type == request.Type);
         }
 
+        if (request.From.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt >= request.From.Value);
+        }
+
+        if (request.To.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt <= request.To.Value);
+        }
+
         var totalCount =
             await query.CountAsync(
                 cancellationToken);

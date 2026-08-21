@@ -811,6 +811,289 @@ public class ActivitiesApiTests
     }
 
     [Fact]
+    public async Task GetMine_WithFromDate_ShouldReturnActivitiesOnOrAfterDate()
+    {
+        await AuthenticateAsync(_client);
+
+        var olderResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5,
+                    1800,
+                    300,
+                    new DateTime(
+                        2026,
+                        8,
+                        1,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)));
+
+        var newerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    7,
+                    2400,
+                    400,
+                    new DateTime(
+                        2026,
+                        8,
+                        15,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            olderResponse.StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            newerResponse.StatusCode);
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities?from=2026-08-10T00:00:00Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            7,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithToDate_ShouldReturnActivitiesOnOrBeforeDate()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    1,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                7,
+                2400,
+                400,
+                new DateTime(
+                    2026,
+                    8,
+                    15,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities?to=2026-08-10T00:00:00Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithDateRange_ShouldReturnActivitiesWithinRange()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                3,
+                1200,
+                200,
+                new DateTime(
+                    2026,
+                    7,
+                    31,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                7,
+                2400,
+                400,
+                new DateTime(
+                    2026,
+                    8,
+                    20,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities" +
+                "?from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithTypeAndDateRange_ShouldApplyBothFilters()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50,
+                3600,
+                1000,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    12,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                8,
+                3000,
+                500,
+                new DateTime(
+                    2026,
+                    8,
+                    20,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities" +
+                "?type=Run" +
+                "&from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            "Run",
+            result.Items[0].Type);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
     public async Task GetActivities_WithTypeFilter_ShouldReturnOnlyMatchingActivities()
     {
         await AuthenticateAsync(_client);
