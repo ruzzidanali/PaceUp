@@ -130,4 +130,27 @@ public class UserService : IUserService
 
         return Map(user);
     }
+
+    public async Task<bool> DeleteAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        var user =
+            await _dbContext.Users
+                .FirstOrDefaultAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (user is null)
+        {
+            return false;
+        }
+
+        _dbContext.Users.Remove(user);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
 }

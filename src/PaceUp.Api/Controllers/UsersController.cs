@@ -128,4 +128,27 @@ public class UsersController : ControllerBase
 
         return Ok(user);
     }
+
+    [HttpDelete("me")]
+    [ProducesResponseType(
+    StatusCodes.Status204NoContent)]
+    [ProducesResponseType(
+    StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMe(
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var deleted =
+            await _userService.DeleteAsync(
+                userId,
+                cancellationToken);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }

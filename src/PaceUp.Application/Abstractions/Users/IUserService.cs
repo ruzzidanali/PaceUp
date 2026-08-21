@@ -21,4 +21,8 @@ public interface IUserService
         Guid userId,
         UpdateProfileImageRequest request,
         CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
 }

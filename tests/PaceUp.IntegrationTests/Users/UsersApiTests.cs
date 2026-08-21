@@ -7,6 +7,8 @@ using PaceUp.Application.DTOs.Authentication;
 using PaceUp.Application.DTOs.Users;
 using PaceUp.Infrastructure.Persistence;
 using PaceUp.IntegrationTests.Infrastructure;
+using PaceUp.Application.DTOs.Activities;
+using PaceUp.Application.DTOs.Goals;
 
 namespace PaceUp.IntegrationTests.Users;
 
@@ -416,5 +418,162 @@ public class UsersApiTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteMe_ShouldDeleteCurrentUser()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var meResponse =
+            await client.GetAsync("/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            meResponse.StatusCode);
+
+        var user =
+            await meResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+
+        var response =
+            await client.DeleteAsync(
+                "/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            response.StatusCode);
+
+        var getResponse =
+            await client.GetAsync(
+                $"/api/users/{user.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            getResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteMe_WithoutToken_ShouldReturnUnauthorized()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        var response =
+            await client.DeleteAsync(
+                "/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteMe_ShouldCascadeDeleteUserData()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client =
+            factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var meResponse =
+            await client.GetAsync(
+                "/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            meResponse.StatusCode);
+
+        var user =
+            await meResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+
+        var activityResponse =
+            await client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5.0,
+                    1800,
+                    300,
+                    DateTime.UtcNow));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            activityResponse.StatusCode);
+
+        var activity =
+            await activityResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(activity);
+
+        var goalResponse =
+            await client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    50.0,
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(30)));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            goalResponse.StatusCode);
+
+        var goal =
+            await goalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        var deleteResponse =
+            await client.DeleteAsync(
+                "/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            deleteResponse.StatusCode);
+
+        var userResponse =
+            await client.GetAsync(
+                $"/api/users/{user.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            userResponse.StatusCode);
+
+        var activityGetResponse =
+            await client.GetAsync(
+                $"/api/activities/{activity.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            activityGetResponse.StatusCode);
+
+        var goalGetResponse =
+            await client.GetAsync(
+                $"/api/goals/{goal.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            goalGetResponse.StatusCode);
     }
 }
