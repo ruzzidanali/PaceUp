@@ -108,4 +108,21 @@ public class AuthController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize]
+    [HttpPost("resend-verification")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResendVerification(
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        await _authenticationService.ResendVerificationAsync(
+            userId,
+            cancellationToken);
+
+        return NoContent();
+    }
 }

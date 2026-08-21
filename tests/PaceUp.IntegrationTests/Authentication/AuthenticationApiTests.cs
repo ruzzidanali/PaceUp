@@ -537,8 +537,14 @@ public class AuthenticationApiTests
 
         var verificationToken =
             await dbContext.EmailVerificationTokens
-                .SingleAsync(
-                    x => x.UserId == userId);
+                .Where(
+                    x =>
+                        x.UserId == userId &&
+                        x.UsedAt == null &&
+                        x.ExpiresAt > DateTime.UtcNow)
+                .OrderByDescending(
+                    x => x.CreatedAt)
+                .FirstAsync();
 
         return verificationToken.Token;
     }
@@ -882,6 +888,172 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.Conflict,
             secondResetResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendVerification_ShouldCreateNewToken()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"resend_{uniqueId}",
+            $"resend_{uniqueId}@example.com",
+            "Resend Verification User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var oldToken =
+            await GetVerificationTokenAsync(
+                authResponse.UserId);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var loginAuthResponse =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(loginAuthResponse);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                loginAuthResponse.AccessToken);
+
+        var resendResponse =
+            await _client.PostAsync(
+                "/api/auth/resend-verification",
+                null);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            resendResponse.StatusCode);
+
+        var newToken =
+            await GetVerificationTokenAsync(
+                authResponse.UserId);
+
+        Assert.NotEqual(
+            oldToken,
+            newToken);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(newToken));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendVerification_WhenEmailAlreadyVerified_ShouldReturnConflict()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"verified_resend_{uniqueId}",
+            $"verified_resend_{uniqueId}@example.com",
+            "Verified Resend User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var loginAuthResponse =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(loginAuthResponse);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                loginAuthResponse.AccessToken);
+
+        var verificationToken =
+            await GetVerificationTokenAsync(
+                authResponse.UserId);
+
+        var verifyResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationToken));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            verifyResponse.StatusCode);
+
+        var resendResponse =
+            await _client.PostAsync(
+                "/api/auth/resend-verification",
+                null);
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            resendResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendVerification_WithoutToken_ShouldReturnUnauthorized()
+    {
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response =
+            await _client.PostAsync(
+                "/api/auth/resend-verification",
+                null);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 
 }

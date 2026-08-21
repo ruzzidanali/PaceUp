@@ -28,4 +28,8 @@ public interface IAuthenticationService
     Task<PasswordResetResponse> ResetPasswordAsync(
         ResetPasswordRequest request,
         CancellationToken cancellationToken);
+
+    Task ResendVerificationAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
 }

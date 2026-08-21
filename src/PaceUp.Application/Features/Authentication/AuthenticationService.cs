@@ -190,6 +190,72 @@ public class AuthenticationService : IAuthenticationService
             cancellationToken);
     }
 
+    public async Task ResendVerificationAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(
+                x => x.Id == userId,
+                cancellationToken);
+
+        if (user is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to resend email verification.");
+        }
+
+        var identity = await _dbContext.UserIdentities
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId,
+                cancellationToken);
+
+        if (identity is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Unable to resend email verification.");
+        }
+
+        if (identity.EmailVerified)
+        {
+            throw new ConflictException(
+                "Email is already verified.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        var existingTokens =
+            await _dbContext.EmailVerificationTokens
+                .Where(
+                    x =>
+                        x.UserId == userId &&
+                        x.ExpiresAt > now &&
+                        x.UsedAt == null)
+                .ToListAsync(
+                    cancellationToken);
+
+        foreach (var existingToken in existingTokens)
+        {
+            existingToken.Expire();
+        }
+
+        var token =
+            _emailVerificationTokenService.GenerateToken();
+
+        var verificationToken =
+            new EmailVerificationToken(
+                userId,
+                token,
+                DateTime.UtcNow.AddHours(24));
+
+        _dbContext.EmailVerificationTokens.Add(
+            verificationToken);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
+
     public async Task<EmailVerificationResponse> VerifyEmailAsync(
     string token,
     CancellationToken cancellationToken)

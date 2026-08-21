@@ -943,4 +943,226 @@ public class AuthenticationServiceTests
 
         Assert.False(token.IsUsed());
     }
+
+    [Fact]
+    public async Task ResendVerificationAsync_ShouldCreateNewToken()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var jwtTokenService =
+            new FakeJwtTokenService();
+
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "new-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                jwtTokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService);
+
+        var user =
+            new User(
+                "resend_user",
+                "resend@example.com",
+                "Resend User");
+
+        var identity =
+            new UserIdentity(
+                user.Id,
+                passwordHasher.Hash("Password123!"));
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+
+        await db.SaveChangesAsync();
+
+        await service.ResendVerificationAsync(
+            user.Id,
+            CancellationToken.None);
+
+        var token =
+            await db.EmailVerificationTokens
+                .SingleAsync(
+                    x => x.UserId == user.Id);
+
+        Assert.Equal(
+            "new-verification-token",
+            token.Token);
+
+        Assert.False(token.IsExpired());
+        Assert.False(token.IsUsed());
+    }
+
+    [Fact]
+    public async Task ResendVerificationAsync_ShouldExpireExistingToken()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var jwtTokenService =
+            new FakeJwtTokenService();
+
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "new-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                jwtTokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService);
+
+        var user =
+            new User(
+                "resend_expire_user",
+                "resend_expire@example.com",
+                "Resend Expire User");
+
+        var identity =
+            new UserIdentity(
+                user.Id,
+                passwordHasher.Hash("Password123!"));
+
+        var existingToken =
+            new EmailVerificationToken(
+                user.Id,
+                "old-verification-token",
+                DateTime.UtcNow.AddHours(24));
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+        db.EmailVerificationTokens.Add(existingToken);
+
+        await db.SaveChangesAsync();
+
+        await service.ResendVerificationAsync(
+            user.Id,
+            CancellationToken.None);
+
+        Assert.True(existingToken.IsExpired());
+
+        var tokens =
+            await db.EmailVerificationTokens
+                .Where(x => x.UserId == user.Id)
+                .ToListAsync();
+
+        Assert.Equal(2, tokens.Count);
+
+        Assert.Contains(
+            tokens,
+            x => x.Token == "new-verification-token");
+
+        Assert.Contains(
+            tokens,
+            x =>
+                x.Token == "old-verification-token" &&
+                x.IsExpired());
+    }
+
+    [Fact]
+    public async Task ResendVerificationAsync_WhenEmailAlreadyVerified_ShouldThrowConflict()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var jwtTokenService =
+            new FakeJwtTokenService();
+
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "new-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                jwtTokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService);
+
+        var user =
+            new User(
+                "verified_user",
+                "verified@example.com",
+                "Verified User");
+
+        var identity =
+            new UserIdentity(
+                user.Id,
+                passwordHasher.Hash("Password123!"));
+
+        identity.VerifyEmail();
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+
+        await db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConflictException>(
+            () => service.ResendVerificationAsync(
+                user.Id,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ResendVerificationAsync_WhenUserDoesNotExist_ShouldThrowUnauthorized()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var jwtTokenService =
+            new FakeJwtTokenService();
+
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "new-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                jwtTokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.ResendVerificationAsync(
+                Guid.NewGuid(),
+                CancellationToken.None));
+    }
 }
