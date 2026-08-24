@@ -34,4 +34,9 @@ public interface IActivityService
         Guid userId,
         Guid activityId,
         CancellationToken cancellationToken);
+
+    Task<ActivityTrendResponse> GetTrendsAsync(
+        Guid userId,
+        ActivityTrendRequest request,
+        CancellationToken cancellationToken);
 }

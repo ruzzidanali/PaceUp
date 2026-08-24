@@ -41,6 +41,25 @@ public class ActivitiesController : ControllerBase
             activity);
     }
 
+    [HttpGet("trends")]
+    [ProducesResponseType(
+    typeof(ActivityTrendResponse),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<ActivityTrendResponse>> GetTrends(
+    [FromQuery] ActivityTrendRequest request,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var trends =
+            await _activityService.GetTrendsAsync(
+                userId,
+                request,
+                cancellationToken);
+
+        return Ok(trends);
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(
         typeof(ActivityResponse),

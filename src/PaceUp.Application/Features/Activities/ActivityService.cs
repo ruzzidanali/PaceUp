@@ -242,6 +242,100 @@ public class ActivityService : IActivityService
         return true;
     }
 
+    public async Task<ActivityTrendResponse> GetTrendsAsync(
+    Guid userId,
+    ActivityTrendRequest request,
+    CancellationToken cancellationToken)
+    {
+        var query =
+            _dbContext.Activities
+                .AsNoTracking()
+                .Where(x => x.UserId == userId);
+
+        if (request.From.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt >= request.From.Value);
+        }
+
+        if (request.To.HasValue)
+        {
+            query = query.Where(
+                x => x.StartedAt <= request.To.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Type))
+        {
+            query = query.Where(
+                x => x.Type == request.Type);
+        }
+
+        var activities =
+            await query
+                .OrderBy(x => x.StartedAt)
+                .ToListAsync(cancellationToken);
+
+        var items =
+            request.GroupBy.ToLowerInvariant() switch
+            {
+                "day" =>
+                    activities
+                        .GroupBy(x => x.StartedAt.Date)
+                        .Select(MapTrendItem)
+                        .ToList(),
+
+                "week" =>
+                    activities
+                        .GroupBy(GetStartOfWeek)
+                        .Select(MapTrendItem)
+                        .ToList(),
+
+                "month" =>
+                    activities
+                        .GroupBy(
+                            x => new DateTime(
+                                x.StartedAt.Year,
+                                x.StartedAt.Month,
+                                1))
+                        .Select(MapTrendItem)
+                        .ToList(),
+
+                _ =>
+                    throw new ArgumentException(
+                        "GroupBy must be day, week, or month.",
+                        nameof(request.GroupBy))
+            };
+
+        return new ActivityTrendResponse(
+            request.From,
+            request.To,
+            request.Type,
+            request.GroupBy.ToLowerInvariant(),
+            items);
+    }
+
+    private static DateTime GetStartOfWeek(
+        Activity activity)
+    {
+        var date = activity.StartedAt.Date;
+
+        var daysSinceMonday =
+            ((int)date.DayOfWeek + 6) % 7;
+
+        return date.AddDays(-daysSinceMonday);
+    }
+
+    private static ActivityTrendItemResponse MapTrendItem(
+        IGrouping<DateTime, Activity> group)
+    {
+        return new ActivityTrendItemResponse(
+            group.Key,
+            group.Count(),
+            group.Sum(x => x.Distance),
+            group.Sum(x => x.DurationSeconds),
+            group.Sum(x => x.Calories ?? 0));
+    }
+
     private static ActivityResponse Map(
         Activity activity)
     {
