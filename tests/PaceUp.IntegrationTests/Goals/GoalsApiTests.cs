@@ -819,104 +819,104 @@ public class GoalsApiTests
     }
 
     [Fact]
-public async Task GetGoalProgress_ShouldIgnoreActivitiesOutsideGoalPeriod()
-{
-    await AuthenticateAsync(_client);
+    public async Task GetGoalProgress_ShouldIgnoreActivitiesOutsideGoalPeriod()
+    {
+        await AuthenticateAsync(_client);
 
-    var startDate = new DateTime(
-        2026,
-        8,
-        10,
-        0,
-        0,
-        0,
-        DateTimeKind.Utc);
+        var startDate = new DateTime(
+            2026,
+            8,
+            10,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc);
 
-    var endDate = new DateTime(
-        2026,
-        8,
-        16,
-        23,
-        59,
-        59,
-        DateTimeKind.Utc);
+        var endDate = new DateTime(
+            2026,
+            8,
+            16,
+            23,
+            59,
+            59,
+            DateTimeKind.Utc);
 
-    var createGoalResponse =
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    50,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        // Before goal period — should be ignored.
         await _client.PostAsJsonAsync(
-            "/api/goals",
-            new CreateGoalRequest(
-                "Distance",
-                50,
-                startDate,
-                endDate));
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                100,
+                3600,
+                500,
+                startDate.AddDays(-1)));
 
-    var goal =
-        await createGoalResponse.Content
-            .ReadFromJsonAsync<GoalResponse>();
+        // Inside goal period — should be included.
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20,
+                1800,
+                300,
+                startDate.AddDays(2)));
 
-    Assert.NotNull(goal);
+        // After goal period — should be ignored.
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                200,
+                3600,
+                800,
+                endDate.AddSeconds(1)));
 
-    // Before goal period — should be ignored.
-    await _client.PostAsJsonAsync(
-        "/api/activities",
-        new CreateActivityRequest(
-            "Run",
-            100,
-            3600,
-            500,
-            startDate.AddDays(-1)));
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
 
-    // Inside goal period — should be included.
-    await _client.PostAsJsonAsync(
-        "/api/activities",
-        new CreateActivityRequest(
-            "Run",
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            50,
+            progress.Target);
+
+        Assert.Equal(
             20,
-            1800,
-            300,
-            startDate.AddDays(2)));
+            progress.Current);
 
-    // After goal period — should be ignored.
-    await _client.PostAsJsonAsync(
-        "/api/activities",
-        new CreateActivityRequest(
-            "Run",
-            200,
-            3600,
-            800,
-            endDate.AddSeconds(1)));
+        Assert.Equal(
+            30,
+            progress.Remaining);
 
-    var response =
-        await _client.GetAsync(
-            $"/api/goals/{goal.Id}/progress");
+        Assert.Equal(
+            40,
+            progress.ProgressPercentage);
 
-    Assert.Equal(
-        HttpStatusCode.OK,
-        response.StatusCode);
-
-    var progress =
-        await response.Content
-            .ReadFromJsonAsync<GoalProgressResponse>();
-
-    Assert.NotNull(progress);
-
-    Assert.Equal(
-        50,
-        progress.Target);
-
-    Assert.Equal(
-        20,
-        progress.Current);
-
-    Assert.Equal(
-        30,
-        progress.Remaining);
-
-    Assert.Equal(
-        40,
-        progress.ProgressPercentage);
-
-    Assert.False(
-        progress.IsCompleted);
-}
+        Assert.False(
+            progress.IsCompleted);
+    }
 }
