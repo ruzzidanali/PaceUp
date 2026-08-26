@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PaceUp.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using PaceUp.Infrastructure.Persistence;
 namespace PaceUp.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PaceUpDbContext))]
-    partial class PaceUpDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826034905_AddFollows")]
+    partial class AddFollows
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

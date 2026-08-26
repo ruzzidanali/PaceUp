@@ -426,6 +426,8 @@ public class GoalServiceTests
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
+        public DbSet<Follow> Follows { get; } = null!;
+
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();
 

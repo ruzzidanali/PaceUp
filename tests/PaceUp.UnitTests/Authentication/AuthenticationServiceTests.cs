@@ -1046,6 +1046,8 @@ public class AuthenticationServiceTests
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
+        public DbSet<Follow> Follows { get; } = null!;
+
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();
 

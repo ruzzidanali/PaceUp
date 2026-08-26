@@ -25,4 +25,22 @@ public interface IUserService
     Task<bool> DeleteAsync(
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<bool> FollowAsync(
+        Guid followerId,
+        Guid followingId,
+        CancellationToken cancellationToken);
+
+    Task<bool> UnfollowAsync(
+        Guid followerId,
+        Guid followingId,
+        CancellationToken cancellationToken);
+
+    Task<FollowListResponse?> GetFollowersAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    Task<FollowListResponse?> GetFollowingAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
 }

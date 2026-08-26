@@ -151,4 +151,97 @@ public class UsersController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/follow")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Follow(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var followed =
+            await _userService.FollowAsync(
+                userId,
+                id,
+                cancellationToken);
+
+        if (!followed)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/follow")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unfollow(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var unfollowed =
+            await _userService.UnfollowAsync(
+                userId,
+                id,
+                cancellationToken);
+
+        if (!unfollowed)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/followers")]
+    [ProducesResponseType(
+        typeof(FollowListResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FollowListResponse>> GetFollowers(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _userService.GetFollowersAsync(
+                id,
+                cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/following")]
+    [ProducesResponseType(
+        typeof(FollowListResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FollowListResponse>> GetFollowing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _userService.GetFollowingAsync(
+                id,
+                cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
 }

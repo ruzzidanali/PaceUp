@@ -153,4 +153,159 @@ public class UserService : IUserService
 
         return true;
     }
+
+    public async Task<bool> FollowAsync(
+    Guid followerId,
+    Guid followingId,
+    CancellationToken cancellationToken)
+    {
+        if (followerId == followingId)
+        {
+            throw new ConflictException(
+                "A user cannot follow themselves.");
+        }
+
+        var followingUserExists =
+            await _dbContext.Users
+                .AnyAsync(
+                    x => x.Id == followingId,
+                    cancellationToken);
+
+        if (!followingUserExists)
+        {
+            return false;
+        }
+
+        var alreadyFollowing =
+            await _dbContext.Follows
+                .AnyAsync(
+                    x =>
+                        x.FollowerId == followerId &&
+                        x.FollowingId == followingId,
+                    cancellationToken);
+
+        if (alreadyFollowing)
+        {
+            throw new ConflictException(
+                "You are already following this user.");
+        }
+
+        var follow =
+            new Follow(
+                followerId,
+                followingId);
+
+        _dbContext.Follows.Add(follow);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    public async Task<bool> UnfollowAsync(
+        Guid followerId,
+        Guid followingId,
+        CancellationToken cancellationToken)
+    {
+        var follow =
+            await _dbContext.Follows
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.FollowerId == followerId &&
+                        x.FollowingId == followingId,
+                    cancellationToken);
+
+        if (follow is null)
+        {
+            return false;
+        }
+
+        _dbContext.Follows.Remove(follow);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    public async Task<FollowListResponse?> GetFollowersAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var userExists =
+            await _dbContext.Users
+                .AnyAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (!userExists)
+        {
+            return null;
+        }
+
+        var follows =
+            await _dbContext.Follows
+                .AsNoTracking()
+                .Where(x => x.FollowingId == userId)
+                .Include(x => x.Follower)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+        var users =
+            follows
+                .Select(
+                    x =>
+                        new FollowResponse(
+                            x.Follower.Id,
+                            x.Follower.Username,
+                            x.Follower.DisplayName,
+                            x.Follower.ProfileImageUrl,
+                            x.CreatedAt))
+                .ToList();
+
+        return new FollowListResponse(
+            users,
+            users.Count);
+    }
+
+    public async Task<FollowListResponse?> GetFollowingAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var userExists =
+            await _dbContext.Users
+                .AnyAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (!userExists)
+        {
+            return null;
+        }
+
+        var follows =
+            await _dbContext.Follows
+                .AsNoTracking()
+                .Where(x => x.FollowerId == userId)
+                .Include(x => x.Following)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+        var users =
+            follows
+                .Select(
+                    x =>
+                        new FollowResponse(
+                            x.Following.Id,
+                            x.Following.Username,
+                            x.Following.DisplayName,
+                            x.Following.ProfileImageUrl,
+                            x.CreatedAt))
+                .ToList();
+
+        return new FollowListResponse(
+            users,
+            users.Count);
+    }
 }
