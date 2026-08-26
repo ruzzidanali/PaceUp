@@ -10,6 +10,8 @@ using PaceUp.Application.Abstractions.Goals;
 using PaceUp.Application.Features.Goals;
 using PaceUp.Application.Abstractions.Dashboard;
 using PaceUp.Application.Features.Dashboard;
+using PaceUp.Application.Abstractions.Feed;
+using PaceUp.Application.Features.Feed;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -28,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<IActivityService, ActivityService>();
 
         services.AddScoped<IGoalService, GoalService>();
+
+        services.AddScoped<IFeedService, FeedService>();
 
         services.AddScoped<IDashboardService, DashboardService>();
 
