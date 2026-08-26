@@ -14,19 +14,22 @@ public class AuthenticationService : IAuthenticationService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IPasswordResetTokenService _passwordResetTokenService;
     private readonly IEmailVerificationTokenService _emailVerificationTokenService;
+    private readonly IRefreshTokenService _refreshTokenService;
 
     public AuthenticationService(
         IApplicationDbContext dbContext,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
         IEmailVerificationTokenService emailVerificationTokenService,
-        IPasswordResetTokenService passwordResetTokenService)
+        IPasswordResetTokenService passwordResetTokenService,
+        IRefreshTokenService refreshTokenService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
         _emailVerificationTokenService = emailVerificationTokenService;
         _passwordResetTokenService = passwordResetTokenService;
+        _refreshTokenService = refreshTokenService;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -90,12 +93,19 @@ public class AuthenticationService : IAuthenticationService
                 user.Username,
                 user.Email);
 
+        var refreshToken =
+            await _refreshTokenService.CreateAsync(
+                user.Id,
+                cancellationToken
+            );
+
         return new AuthResponse(
             user.Id,
             user.Username,
             user.Email,
             user.DisplayName,
             accessToken,
+            refreshToken,
             _jwtTokenService.GetAccessTokenExpiration());
     }
 
@@ -158,12 +168,19 @@ public class AuthenticationService : IAuthenticationService
                 user.Username,
                 user.Email);
 
+        var refreshToken =
+            await _refreshTokenService.CreateAsync(
+                user.Id,
+                cancellationToken
+            );
+
         return new AuthResponse(
             user.Id,
             user.Username,
             user.Email,
             user.DisplayName,
             accessToken,
+            refreshToken,
             _jwtTokenService.GetAccessTokenExpiration());
     }
 
@@ -404,5 +421,65 @@ public class AuthenticationService : IAuthenticationService
             cancellationToken);
 
         return new PasswordResetResponse(true);
+    }
+
+    public async Task<RefreshTokenResponse> RefreshAsync(
+    string refreshToken,
+    CancellationToken cancellationToken)
+    {
+        var userId =
+            await _refreshTokenService.ValidateAsync(
+                refreshToken,
+                cancellationToken);
+
+        if (userId is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid or expired refresh token.");
+        }
+
+        var user =
+            await _dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.Id == userId.Value,
+                    cancellationToken);
+
+        if (user is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid refresh token.");
+        }
+
+        var newRefreshToken =
+            await _refreshTokenService.RotateAsync(
+                refreshToken,
+                cancellationToken);
+
+        if (newRefreshToken is null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid or expired refresh token.");
+        }
+
+        var accessToken =
+            _jwtTokenService.GenerateAccessToken(
+                user.Id,
+                user.Username,
+                user.Email);
+
+        return new RefreshTokenResponse(
+            accessToken,
+            newRefreshToken,
+            _jwtTokenService.GetAccessTokenExpiration());
+    }
+
+    public async Task RevokeRefreshTokenAsync(
+    string refreshToken,
+    CancellationToken cancellationToken)
+    {
+        await _refreshTokenService.RevokeAsync(
+            refreshToken,
+            cancellationToken);
     }
 }

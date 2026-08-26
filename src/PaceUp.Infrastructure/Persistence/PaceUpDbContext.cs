@@ -28,6 +28,9 @@ public class PaceUpDbContext :
     public DbSet<PasswordResetToken> PasswordResetTokens =>
         Set<PasswordResetToken>();
 
+    public DbSet<RefreshToken> RefreshTokens =>
+        Set<RefreshToken>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

@@ -125,4 +125,35 @@ public class AuthController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("refresh")]
+    [ProducesResponseType(
+    typeof(RefreshTokenResponse),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(
+    StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<RefreshTokenResponse>> Refresh(
+    [FromBody] RefreshTokenRequest request,
+    CancellationToken cancellationToken)
+    {
+        var result =
+            await _authenticationService.RefreshAsync(
+                request.RefreshToken,
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPost("revoke")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Revoke(
+        [FromBody] RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _authenticationService.RevokeRefreshTokenAsync(
+            request.RefreshToken,
+            cancellationToken);
+
+        return NoContent();
+    }
 }

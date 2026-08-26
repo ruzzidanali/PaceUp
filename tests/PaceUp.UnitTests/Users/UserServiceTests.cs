@@ -174,6 +174,8 @@ public class UserServiceTests
         public DbSet<PasswordResetToken> PasswordResetTokens =>
             Set<PasswordResetToken>();
 
+        public DbSet<RefreshToken> RefreshTokens { get; } = null!;
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {

@@ -43,6 +43,46 @@ public class FakePasswordResetTokenService
     }
 }
 
+public class FakeRefreshTokenService
+    : IRefreshTokenService
+{
+    private readonly string _token;
+
+    public FakeRefreshTokenService(
+        string token)
+    {
+        _token = token;
+    }
+
+    public Task<string> CreateAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_token);
+    }
+
+    public Task<Guid?> ValidateAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Guid?>(null);
+    }
+
+    public Task RevokeAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> RotateAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult<string?>(null);
+    }
+}
+
 public class AuthenticationServiceTests
 {
     [Fact]
@@ -55,15 +95,19 @@ public class AuthenticationServiceTests
             new Argon2PasswordHasher();
 
         var tokenService =
-    new FakeJwtTokenService();
+            new FakeJwtTokenService();
 
         var emailVerificationTokenService =
-    new FakeEmailVerificationTokenService(
-        "test-verification-token");
+            new FakeEmailVerificationTokenService(
+            "test-verification-token");
 
         var passwordResetTokenService =
             new FakePasswordResetTokenService(
-                "test-password-reset-token");
+            "test-password-reset-token");
+
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
 
         var service =
             new AuthenticationService(
@@ -71,7 +115,8 @@ public class AuthenticationServiceTests
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var request = new RegisterRequest(
             "ruzzidan",
@@ -134,12 +179,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
-        var service = new AuthenticationService(
-            db,
-            passwordHasher,
-            tokenService,
-            emailVerificationTokenService,
-            passwordResetTokenService);
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService,
+                refreshTokenService);
 
         var registerRequest = new RegisterRequest(
             "failed_login_user",
@@ -184,12 +235,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
-        var service = new AuthenticationService(
-            db,
-            passwordHasher,
-            tokenService,
-            emailVerificationTokenService,
-            passwordResetTokenService);
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService,
+                refreshTokenService);
 
         var registerRequest = new RegisterRequest(
             "lockout_user",
@@ -238,12 +295,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
-        var service = new AuthenticationService(
-            db,
-            passwordHasher,
-            tokenService,
-            emailVerificationTokenService,
-            passwordResetTokenService);
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService,
+                refreshTokenService);
 
         var registerRequest = new RegisterRequest(
             "locked_correct_password",
@@ -294,12 +357,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
-        var service = new AuthenticationService(
-            db,
-            passwordHasher,
-            tokenService,
-            emailVerificationTokenService,
-            passwordResetTokenService);
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService,
+                refreshTokenService);
 
         var registerRequest = new RegisterRequest(
             "reset_failed_attempts",
@@ -373,13 +442,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var registerRequest = new RegisterRequest(
             "login_user",
@@ -433,13 +507,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -480,13 +559,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -527,13 +611,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await service.RegisterAsync(
             new RegisterRequest(
@@ -584,13 +673,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await service.ForgotPasswordAsync(
             user.Email,
@@ -629,13 +723,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await service.ForgotPasswordAsync(
             "does-not-exist@example.com",
@@ -693,7 +792,9 @@ public class AuthenticationServiceTests
                 new FakeEmailVerificationTokenService(
                     "verification-token"),
                 new FakePasswordResetTokenService(
-                    "reset-token"));
+                    "reset-token"),
+                new FakeRefreshTokenService(
+                    "test-refresh-token"));
 
         var request =
             new ResetPasswordRequest(
@@ -749,7 +850,9 @@ public class AuthenticationServiceTests
                 new FakeEmailVerificationTokenService(
                     "verification-token"),
                 new FakePasswordResetTokenService(
-                    "reset-token"));
+                    "reset-token"),
+                new FakeRefreshTokenService(
+                    "test-refresh-token"));
 
         var request =
             new ResetPasswordRequest(
@@ -803,7 +906,9 @@ public class AuthenticationServiceTests
                 new FakeEmailVerificationTokenService(
                     "verification-token"),
                 new FakePasswordResetTokenService(
-                    "reset-token"));
+                    "reset-token"),
+                new FakeRefreshTokenService(
+                    "test-refresh-token"));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => service.ResetPasswordAsync(
@@ -856,7 +961,9 @@ public class AuthenticationServiceTests
                 new FakeEmailVerificationTokenService(
                     "verification-token"),
                 new FakePasswordResetTokenService(
-                    "reset-token"));
+                    "reset-token"),
+                new FakeRefreshTokenService(
+                    "test-refresh-token"));
 
         await Assert.ThrowsAsync<ConflictException>(
             () => service.ResetPasswordAsync(
@@ -897,7 +1004,9 @@ public class AuthenticationServiceTests
                 new FakeEmailVerificationTokenService(
                     "verification-token"),
                 new FakePasswordResetTokenService(
-                    "reset-token"));
+                    "reset-token"),
+                new FakeRefreshTokenService(
+                    "test-refresh-token"));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => service.ResetPasswordAsync(
@@ -945,6 +1054,8 @@ public class AuthenticationServiceTests
 
         public DbSet<PasswordResetToken> PasswordResetTokens =>
             Set<PasswordResetToken>();
+
+        public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -994,13 +1105,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -1064,13 +1180,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -1104,13 +1225,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 tokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var request =
             new ChangePasswordRequest(
@@ -1141,6 +1267,10 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var jwtTokenService =
             new FakeJwtTokenService();
 
@@ -1150,7 +1280,8 @@ public class AuthenticationServiceTests
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var request = new RegisterRequest(
             "verification_user",
@@ -1198,13 +1329,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var user =
             new User(
@@ -1259,13 +1395,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var user =
             new User(
@@ -1334,13 +1475,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         var user =
             new User(
@@ -1386,13 +1532,18 @@ public class AuthenticationServiceTests
             new FakePasswordResetTokenService(
                 "test-password-reset-token");
 
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+            "test-refresh-token");
+
         var service =
             new AuthenticationService(
                 db,
                 passwordHasher,
                 jwtTokenService,
                 emailVerificationTokenService,
-                passwordResetTokenService);
+                passwordResetTokenService,
+                refreshTokenService);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => service.ResendVerificationAsync(

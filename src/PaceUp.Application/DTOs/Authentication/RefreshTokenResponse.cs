@@ -1,10 +1,6 @@
 namespace PaceUp.Application.DTOs.Authentication;
 
-public record AuthResponse(
-    Guid UserId,
-    string Username,
-    string Email,
-    string DisplayName,
+public record RefreshTokenResponse(
     string AccessToken,
     string RefreshToken,
     DateTime ExpiresAt);
