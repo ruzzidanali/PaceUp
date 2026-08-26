@@ -413,6 +413,9 @@ public class FeedServiceTests
         public DbSet<Follow> Follows =>
             Set<Follow>();
 
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
         protected override void OnModelCreating(
     ModelBuilder modelBuilder)
         {

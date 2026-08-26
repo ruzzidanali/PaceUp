@@ -19,6 +19,8 @@ public interface IApplicationDbContext
 
     DbSet<RefreshToken> RefreshTokens { get; }
 
+    DbSet<Notification> Notifications { get; }
+
     DbSet<Follow> Follows { get; }
 
     Task<int> SaveChangesAsync(

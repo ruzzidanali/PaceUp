@@ -4,6 +4,8 @@ using PaceUp.Application.Abstractions.Users;
 using PaceUp.Application.DTOs.Users;
 using PaceUp.Domain.Entities;
 using PaceUp.Application.Exceptions;
+using PaceUp.Domain.Constants;
+using PaceUp.Application.Abstractions.Notifications;
 
 namespace PaceUp.Application.Features.Users;
 
@@ -11,9 +13,14 @@ public class UserService : IUserService
 {
     private readonly IApplicationDbContext _dbContext;
 
-    public UserService(IApplicationDbContext dbContext)
+    private readonly INotificationService _notificationService;
+
+    public UserService(
+    IApplicationDbContext dbContext,
+    INotificationService notificationService)
     {
         _dbContext = dbContext;
+        _notificationService = notificationService;
     }
 
     public async Task<UserResponse> CreateAsync(
@@ -196,6 +203,15 @@ public class UserService : IUserService
                 followingId);
 
         _dbContext.Follows.Add(follow);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        await _notificationService.CreateAsync(
+            followingId,
+            followerId,
+            "NewFollower",
+            cancellationToken);
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);

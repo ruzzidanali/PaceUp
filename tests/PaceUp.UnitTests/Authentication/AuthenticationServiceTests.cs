@@ -1057,6 +1057,9 @@ public class AuthenticationServiceTests
         public DbSet<PasswordResetToken> PasswordResetTokens =>
             Set<PasswordResetToken>();
 
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
         public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

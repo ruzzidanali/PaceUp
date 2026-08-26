@@ -687,6 +687,9 @@ public class ActivityServiceTests
 
         public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
             {

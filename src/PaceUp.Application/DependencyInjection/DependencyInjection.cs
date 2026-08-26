@@ -12,6 +12,8 @@ using PaceUp.Application.Abstractions.Dashboard;
 using PaceUp.Application.Features.Dashboard;
 using PaceUp.Application.Abstractions.Feed;
 using PaceUp.Application.Features.Feed;
+using PaceUp.Application.Abstractions.Notifications;
+using PaceUp.Application.Features.Notifications;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -34,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<IFeedService, FeedService>();
 
         services.AddScoped<IDashboardService, DashboardService>();
+
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

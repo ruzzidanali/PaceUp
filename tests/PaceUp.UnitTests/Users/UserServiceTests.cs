@@ -4,7 +4,9 @@ using PaceUp.Application.DTOs.Users;
 using PaceUp.Application.Features.Users;
 using PaceUp.Domain.Entities;
 using PaceUp.Application.Exceptions;
-
+using PaceUp.Application.Abstractions.Notifications;
+using PaceUp.Application.DTOs.Notifications;
+using PaceUp.Domain.Constants;
 namespace PaceUp.UnitTests.Users;
 
 public class UserServiceTests
@@ -25,7 +27,9 @@ public class UserServiceTests
         await db.SaveChangesAsync();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileRequest(
@@ -73,7 +77,9 @@ public class UserServiceTests
             CreateDatabase();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileRequest(
@@ -110,7 +116,9 @@ public class UserServiceTests
         await db.SaveChangesAsync();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileRequest(
@@ -181,6 +189,9 @@ public class UserServiceTests
         public DbSet<RefreshToken> RefreshTokens =>
             Set<RefreshToken>();
 
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -218,7 +229,9 @@ public class UserServiceTests
         await db.SaveChangesAsync();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileImageRequest(
@@ -253,7 +266,9 @@ public class UserServiceTests
             CreateDatabase();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileImageRequest(
@@ -288,7 +303,9 @@ public class UserServiceTests
         await db.SaveChangesAsync();
 
         var service =
-            new UserService(db);
+            new UserService(
+    db,
+    new FakeNotificationService());
 
         var request =
             new UpdateProfileImageRequest(null);
@@ -332,7 +349,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.FollowAsync(
             follower.Id,
@@ -367,7 +387,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.FollowAsync(
             follower.Id,
@@ -394,7 +417,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         await Assert.ThrowsAsync<ConflictException>(
             () => service.FollowAsync(
@@ -417,7 +443,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.FollowAsync(
             follower.Id,
@@ -455,7 +484,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         await Assert.ThrowsAsync<ConflictException>(
             () => service.FollowAsync(
@@ -490,7 +522,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.UnfollowAsync(
             follower.Id,
@@ -522,7 +557,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.UnfollowAsync(
             follower.Id,
@@ -565,7 +603,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.GetFollowersAsync(
             target.Id,
@@ -616,7 +657,10 @@ public class UserServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new UserService(db);
+        var service =
+    new UserService(
+        db,
+        new FakeNotificationService());
 
         var result = await service.GetFollowingAsync(
             follower.Id,
@@ -633,4 +677,54 @@ public class UserServiceTests
             result.Users,
             x => x.UserId == following2.Id);
     }
+
+    private sealed class FakeNotificationService
+    : INotificationService
+    {
+        public List<NotificationCall> Calls { get; } = [];
+
+        public Task<IReadOnlyList<NotificationResponse>> GetAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<
+                IReadOnlyList<NotificationResponse>>(
+                    Array.Empty<NotificationResponse>());
+        }
+
+        public Task<bool> MarkAsReadAsync(
+            Guid userId,
+            Guid notificationId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(false);
+        }
+
+        public Task MarkAllAsReadAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task CreateAsync(
+            Guid recipientUserId,
+            Guid actorUserId,
+            string type,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add(
+                new NotificationCall(
+                    recipientUserId,
+                    actorUserId,
+                    type));
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private record NotificationCall(
+        Guid RecipientUserId,
+        Guid ActorUserId,
+        string Type);
 }
