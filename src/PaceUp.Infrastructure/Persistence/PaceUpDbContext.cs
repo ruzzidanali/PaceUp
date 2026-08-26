@@ -31,6 +31,9 @@ public class PaceUpDbContext :
     public DbSet<RefreshToken> RefreshTokens =>
         Set<RefreshToken>();
 
+    public DbSet<Follow> Follows =>
+        Set<Follow>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
