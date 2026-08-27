@@ -115,6 +115,78 @@ class ActivityService {
     );
   }
 
+  Future<ActivityResponse> getActivity(String id) async {
+    final accessToken = await _tokenStorage.getAccessToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception('No access token available.');
+    }
+
+    final response = await _apiClient.get(
+      '/activities/$id',
+      token: accessToken,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load activity: '
+        '${response.statusCode} ${response.body}',
+      );
+    }
+
+    return ActivityResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<ActivityResponse> updateActivity(
+    String id,
+    UpdateActivityRequest request,
+  ) async {
+    final accessToken = await _tokenStorage.getAccessToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception('No access token available.');
+    }
+
+    final response = await _apiClient.put(
+      '/activities/$id',
+      body: request.toJson(),
+      token: accessToken,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to update activity: '
+        '${response.statusCode} ${response.body}',
+      );
+    }
+
+    return ActivityResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> deleteActivity(String id) async {
+    final accessToken = await _tokenStorage.getAccessToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception('No access token available.');
+    }
+
+    final response = await _apiClient.delete(
+      '/activities/$id',
+      token: accessToken,
+    );
+
+    if (response.statusCode != 204) {
+      throw Exception(
+        'Failed to delete activity: '
+        '${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
   void dispose() {
     _apiClient.dispose();
   }

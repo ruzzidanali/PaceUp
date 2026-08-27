@@ -4,7 +4,11 @@ import '../models/activity_models.dart';
 import '../services/activity_service.dart';
 
 class AddActivityScreen extends StatefulWidget {
-  const AddActivityScreen({super.key});
+  final ActivityResponse? activity;
+
+  const AddActivityScreen({super.key, this.activity});
+
+  bool get isEditing => activity != null;
 
   @override
   State<AddActivityScreen> createState() => _AddActivityScreenState();
@@ -37,6 +41,27 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   void initState() {
     super.initState();
     _activityService = ActivityService();
+
+    final activity = widget.activity;
+
+    if (activity != null) {
+      _selectedType = activity.type;
+      _startedAt = activity.startedAt;
+
+      _distanceController.text = activity.distance.toString();
+
+      final hours = activity.durationSeconds ~/ 3600;
+      final minutes = (activity.durationSeconds % 3600) ~/ 60;
+      final seconds = activity.durationSeconds % 60;
+
+      _hoursController.text = hours.toString();
+      _minutesController.text = minutes.toString();
+      _secondsController.text = seconds.toString();
+
+      if (activity.calories != null) {
+        _caloriesController.text = activity.calories.toString();
+      }
+    }
   }
 
   @override
@@ -68,26 +93,47 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
     final caloriesText = _caloriesController.text.trim();
 
-    final request = CreateActivityRequest(
-      type: _selectedType,
-      distance: double.parse(_distanceController.text),
-      durationSeconds: durationSeconds,
-      calories: caloriesText.isEmpty ? null : int.parse(caloriesText),
-      startedAt: _startedAt,
-    );
-
     setState(() {
       _isSaving = true;
     });
 
     try {
-      await _activityService.createActivity(request);
+      if (widget.activity == null) {
+        final request = CreateActivityRequest(
+          type: _selectedType,
+          distance: double.parse(_distanceController.text),
+          durationSeconds: durationSeconds,
+          calories: caloriesText.isEmpty ? null : int.parse(caloriesText),
+          startedAt: _startedAt,
+        );
 
-      if (!mounted) {
-        return;
+        await _activityService.createActivity(request);
+
+        if (!mounted) {
+          return;
+        }
+
+        Navigator.of(context).pop(true);
+      } else {
+        final request = UpdateActivityRequest(
+          type: _selectedType,
+          distance: double.parse(_distanceController.text),
+          durationSeconds: durationSeconds,
+          calories: caloriesText.isEmpty ? null : int.parse(caloriesText),
+          startedAt: _startedAt,
+        );
+
+        final updated = await _activityService.updateActivity(
+          widget.activity!.id,
+          request,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        Navigator.of(context).pop(updated);
       }
-
-      Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) {
         return;
@@ -186,7 +232,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Activity')),
+      appBar: AppBar(
+        title: Text(widget.isEditing ? 'Edit Activity' : 'Add Activity'),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -313,7 +361,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save Activity'),
+                        : Text(
+                            widget.isEditing ? 'Save Changes' : 'Save Activity',
+                          ),
                   ),
                 ),
               ],

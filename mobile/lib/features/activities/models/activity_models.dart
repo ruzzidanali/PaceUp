@@ -119,3 +119,29 @@ class CreateActivityRequest {
     };
   }
 }
+
+class UpdateActivityRequest {
+  final String type;
+  final double distance;
+  final int durationSeconds;
+  final int? calories;
+  final DateTime startedAt;
+
+  const UpdateActivityRequest({
+    required this.type,
+    required this.distance,
+    required this.durationSeconds,
+    required this.calories,
+    required this.startedAt,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'distance': distance,
+      'durationSeconds': durationSeconds,
+      'calories': calories,
+      'startedAt': startedAt.toUtc().toIso8601String(),
+    };
+  }
+}

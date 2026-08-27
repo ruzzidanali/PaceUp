@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/activity_models.dart';
 import '../services/activity_service.dart';
 import 'add_activity_screen.dart';
+import 'activity_details_screen.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -260,6 +261,18 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           ),
         ),
         isThreeLine: true,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () async {
+          final deleted = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => ActivityDetailsScreen(activity: activity),
+            ),
+          );
+
+          if (deleted == true && mounted) {
+            await _loadActivities();
+          }
+        },
       ),
     );
   }
