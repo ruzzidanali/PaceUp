@@ -37,6 +37,12 @@ public class PaceUpDbContext :
     public DbSet<Notification> Notifications =>
         Set<Notification>();
 
+    public DbSet<Challenge> Challenges =>
+        Set<Challenge>();
+
+public DbSet<ChallengeParticipant> ChallengeParticipants =>
+        Set<ChallengeParticipant>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

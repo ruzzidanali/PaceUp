@@ -690,21 +690,27 @@ public class ActivityServiceTests
         public DbSet<Notification> Notifications =>
             Set<Notification>();
 
+        public DbSet<Challenge> Challenges =>
+            Set<Challenge>();
+
+        public DbSet<ChallengeParticipant> ChallengeParticipants =>
+            Set<ChallengeParticipant>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
-            {
-                modelBuilder.Entity<User>()
-                    .HasKey(x => x.Id);
+        {
+            modelBuilder.Entity<User>()
+                .HasKey(x => x.Id);
 
-                modelBuilder.Entity<UserIdentity>()
-                    .HasKey(x => x.UserId);
+            modelBuilder.Entity<UserIdentity>()
+                .HasKey(x => x.UserId);
 
-                modelBuilder.Entity<Activity>()
-                    .HasKey(x => x.Id);
+            modelBuilder.Entity<Activity>()
+                .HasKey(x => x.Id);
 
-                modelBuilder.Entity<EmailVerificationToken>()
-                    .HasKey(x => x.Id);
-            }
+            modelBuilder.Entity<EmailVerificationToken>()
+                .HasKey(x => x.Id);
+        }
     }
 
     [Fact]

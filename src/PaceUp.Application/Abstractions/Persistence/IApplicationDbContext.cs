@@ -23,6 +23,10 @@ public interface IApplicationDbContext
 
     DbSet<Follow> Follows { get; }
 
+    DbSet<Challenge> Challenges { get; }
+
+    DbSet<ChallengeParticipant> ChallengeParticipants { get; }
+
     Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default);
 }

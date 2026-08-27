@@ -1060,6 +1060,12 @@ public class AuthenticationServiceTests
         public DbSet<Notification> Notifications =>
             Set<Notification>();
 
+        public DbSet<Challenge> Challenges =>
+            Set<Challenge>();
+
+        public DbSet<ChallengeParticipant> ChallengeParticipants =>
+            Set<ChallengeParticipant>();
+
         public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

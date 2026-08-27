@@ -378,6 +378,12 @@ public class NotificationServiceTests
         public DbSet<RefreshToken> RefreshTokens =>
             Set<RefreshToken>();
 
+        public DbSet<Challenge> Challenges =>
+            Set<Challenge>();
+
+        public DbSet<ChallengeParticipant> ChallengeParticipants =>
+            Set<ChallengeParticipant>();
+
         protected override void OnModelCreating(
     ModelBuilder modelBuilder)
         {
