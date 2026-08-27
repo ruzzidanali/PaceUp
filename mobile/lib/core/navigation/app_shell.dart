@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/auth/services/auth_state.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/activities/screens/activities_screen.dart';
 
 class AppShell extends StatefulWidget {
   final AuthController authController;
@@ -60,11 +61,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomeScreen(authController: widget.authController),
-      const _PlaceholderPage(
-        icon: Icons.directions_run_rounded,
-        title: 'Activities',
-        message: 'Your activities will appear here.',
-      ),
+      const ActivitiesScreen(),
       const _PlaceholderPage(
         icon: Icons.flag_rounded,
         title: 'Goals',
