@@ -598,4 +598,325 @@ public class GoalsApiTests
             HttpStatusCode.Unauthorized,
             response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetGoalProgress_ShouldReturnDurationProgress()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Duration",
+                    7200,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                startDate.AddDays(1)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20,
+                2400,
+                500,
+                startDate.AddDays(2)));
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            7200,
+            progress.Target);
+
+        Assert.Equal(
+            4200,
+            progress.Current);
+
+        Assert.Equal(
+            3000,
+            progress.Remaining);
+
+        Assert.Equal(
+            58.333333333333336,
+            progress.ProgressPercentage);
+
+        Assert.False(
+            progress.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_ShouldReturnCaloriesProgress()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Calories",
+                    2000,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                500,
+                startDate.AddDays(1)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20,
+                3600,
+                700,
+                startDate.AddDays(2)));
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            2000,
+            progress.Target);
+
+        Assert.Equal(
+            1200,
+            progress.Current);
+
+        Assert.Equal(
+            800,
+            progress.Remaining);
+
+        Assert.Equal(
+            60,
+            progress.ProgressPercentage);
+
+        Assert.False(
+            progress.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_ShouldReturnActivitiesProgress()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = DateTime.UtcNow.Date;
+        var endDate = startDate.AddDays(6);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Activities",
+                    5,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        for (var i = 0; i < 3; i++)
+        {
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5,
+                    1800,
+                    300,
+                    startDate.AddDays(i + 1)));
+        }
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            5,
+            progress.Target);
+
+        Assert.Equal(
+            3,
+            progress.Current);
+
+        Assert.Equal(
+            2,
+            progress.Remaining);
+
+        Assert.Equal(
+            60,
+            progress.ProgressPercentage);
+
+        Assert.False(
+            progress.IsCompleted);
+    }
+
+    [Fact]
+    public async Task GetGoalProgress_ShouldIgnoreActivitiesOutsideGoalPeriod()
+    {
+        await AuthenticateAsync(_client);
+
+        var startDate = new DateTime(
+            2026,
+            8,
+            10,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc);
+
+        var endDate = new DateTime(
+            2026,
+            8,
+            16,
+            23,
+            59,
+            59,
+            DateTimeKind.Utc);
+
+        var createGoalResponse =
+            await _client.PostAsJsonAsync(
+                "/api/goals",
+                new CreateGoalRequest(
+                    "Distance",
+                    50,
+                    startDate,
+                    endDate));
+
+        var goal =
+            await createGoalResponse.Content
+                .ReadFromJsonAsync<GoalResponse>();
+
+        Assert.NotNull(goal);
+
+        // Before goal period — should be ignored.
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                100,
+                3600,
+                500,
+                startDate.AddDays(-1)));
+
+        // Inside goal period — should be included.
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20,
+                1800,
+                300,
+                startDate.AddDays(2)));
+
+        // After goal period — should be ignored.
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                200,
+                3600,
+                800,
+                endDate.AddSeconds(1)));
+
+        var response =
+            await _client.GetAsync(
+                $"/api/goals/{goal.Id}/progress");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var progress =
+            await response.Content
+                .ReadFromJsonAsync<GoalProgressResponse>();
+
+        Assert.NotNull(progress);
+
+        Assert.Equal(
+            50,
+            progress.Target);
+
+        Assert.Equal(
+            20,
+            progress.Current);
+
+        Assert.Equal(
+            30,
+            progress.Remaining);
+
+        Assert.Equal(
+            40,
+            progress.ProgressPercentage);
+
+        Assert.False(
+            progress.IsCompleted);
+    }
 }

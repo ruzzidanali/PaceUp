@@ -33,6 +33,8 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
         services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
 
         services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();

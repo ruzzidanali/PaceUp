@@ -6,4 +6,5 @@ public record AuthResponse(
     string Email,
     string DisplayName,
     string AccessToken,
+    string RefreshToken,
     DateTime ExpiresAt);

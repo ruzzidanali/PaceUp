@@ -28,6 +28,21 @@ public class PaceUpDbContext :
     public DbSet<PasswordResetToken> PasswordResetTokens =>
         Set<PasswordResetToken>();
 
+    public DbSet<RefreshToken> RefreshTokens =>
+        Set<RefreshToken>();
+
+    public DbSet<Follow> Follows =>
+        Set<Follow>();
+
+    public DbSet<Notification> Notifications =>
+        Set<Notification>();
+
+    public DbSet<Challenge> Challenges =>
+        Set<Challenge>();
+
+public DbSet<ChallengeParticipant> ChallengeParticipants =>
+        Set<ChallengeParticipant>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

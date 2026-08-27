@@ -101,6 +101,21 @@ public class AuthenticationApiTests
         Assert.Equal(
             registerRequest.Username,
             result.Username);
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                result.RefreshToken
+            ));
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                result.AccessToken
+            )
+        );
+
+        Assert.True(
+            result.ExpiresAt > DateTime.UtcNow
+        );
     }
 
     [Fact]
@@ -1054,6 +1069,255 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_AfterFiveFailedAttempts_ShouldLockAccount()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"lockout_api_{uniqueId}",
+            $"lockout_api_{uniqueId}@example.com",
+            "Lockout API User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/auth/login",
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"));
+
+            Assert.Equal(
+                HttpStatusCode.Unauthorized,
+                response.StatusCode);
+        }
+
+        var correctPasswordResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            correctPasswordResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_WithCorrectPassword_ShouldResetFailedLoginAttempts()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"reset_lockout_{uniqueId}",
+            $"reset_lockout_{uniqueId}@example.com",
+            "Reset Lockout User",
+            "Password123!");
+
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/auth/login",
+                    new LoginRequest(
+                        registerRequest.Email,
+                        "WrongPassword!"));
+
+            Assert.Equal(
+                HttpStatusCode.Unauthorized,
+                response.StatusCode);
+        }
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ShouldReturnNewTokensAndRotateRefreshToken()
+    {
+        var registerRequest = new RegisterRequest(
+            "refresh_api_user",
+            "refresh_api@example.com",
+            "Refresh API User",
+            "Password123!");
+
+        await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registerRequest);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    "refresh_api@example.com",
+                    "Password123!"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var login =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(login);
+
+        var refreshResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new RefreshTokenRequest(
+                    login.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            refreshResponse.StatusCode);
+
+        var refreshed =
+            await refreshResponse.Content
+                .ReadFromJsonAsync<RefreshTokenResponse>();
+
+        Assert.NotNull(refreshed);
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                refreshed.AccessToken));
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                refreshed.RefreshToken));
+
+        Assert.NotEqual(
+            login.RefreshToken,
+            refreshed.RefreshToken);
+
+        Assert.NotEqual(
+            login.AccessToken,
+            refreshed.AccessToken);
+    }
+
+    [Fact]
+    public async Task Refresh_WithRotatedToken_ShouldReturnUnauthorized()
+    {
+        var registerRequest = new RegisterRequest(
+            "refresh_reuse_api_user",
+            "refresh_reuse_api@example.com",
+            "Refresh Reuse API User",
+            "Password123!");
+
+        await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registerRequest);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    "refresh_reuse_api@example.com",
+                    "Password123!"));
+
+        var login =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(login);
+
+        var firstRefresh =
+            await _client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new RefreshTokenRequest(
+                    login.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            firstRefresh.StatusCode);
+
+        var secondRefresh =
+            await _client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new RefreshTokenRequest(
+                    login.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            secondRefresh.StatusCode);
+    }
+
+    [Fact]
+    public async Task RevokeRefreshToken_ShouldInvalidateRefreshToken()
+    {
+        var registerRequest = new RegisterRequest(
+            "revoke_api_user",
+            "revoke_api@example.com",
+            "Revoke API User",
+            "Password123!");
+
+        await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registerRequest);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    "revoke_api@example.com",
+                    "Password123!"));
+
+        var login =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(login);
+
+        var revokeResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/revoke",
+                new RefreshTokenRequest(
+                    login.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            revokeResponse.StatusCode);
+
+        var refreshResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new RefreshTokenRequest(
+                    login.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            refreshResponse.StatusCode);
     }
 
 }

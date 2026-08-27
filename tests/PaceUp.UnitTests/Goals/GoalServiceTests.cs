@@ -426,11 +426,24 @@ public class GoalServiceTests
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
+        public DbSet<Follow> Follows { get; } = null!;
+
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();
 
         public DbSet<PasswordResetToken> PasswordResetTokens =>
             Set<PasswordResetToken>();
+
+        public DbSet<RefreshToken> RefreshTokens { get; } = null!;
+
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
+        public DbSet<Challenge> Challenges =>
+            Set<Challenge>();
+
+        public DbSet<ChallengeParticipant> ChallengeParticipants =>
+            Set<ChallengeParticipant>();
 
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)

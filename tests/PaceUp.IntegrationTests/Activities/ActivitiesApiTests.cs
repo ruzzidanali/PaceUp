@@ -256,6 +256,202 @@ public class ActivitiesApiTests
     }
 
     [Fact]
+    public async Task GetActivityStats_WithDateRange_ShouldReturnStatisticsWithinRange()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(
+                    2026, 7, 25,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(
+                    2026, 8, 10,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20.0,
+                5400,
+                800,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Walk",
+                3.0,
+                1800,
+                150,
+                new DateTime(
+                    2026, 8, 20,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/stats" +
+                "?from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var stats =
+            await response.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            2,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            30.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            9000,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            1400,
+            stats.TotalCalories);
+
+        Assert.Equal(
+            2,
+            stats.ActivitiesByType.Count);
+
+        Assert.Equal(
+            1,
+            stats.ActivitiesByType["Run"]);
+
+        Assert.Equal(
+            1,
+            stats.ActivitiesByType["Ride"]);
+    }
+
+    [Fact]
+    public async Task GetActivityStats_WithTypeAndDateRange_ShouldReturnMatchingStatistics()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(
+                    2026, 8, 10,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50.0,
+                7200,
+                1200,
+                new DateTime(
+                    2026, 8, 12,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20.0,
+                5400,
+                900,
+                new DateTime(
+                    2026, 8, 20,
+                    10, 0, 0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/stats" +
+                "?type=Run" +
+                "&from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var stats =
+            await response.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            2,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            15.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            5400,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            900,
+            stats.TotalCalories);
+
+        Assert.Single(
+            stats.ActivitiesByType);
+
+        Assert.Equal(
+            2,
+            stats.ActivitiesByType["Run"]);
+
+        Assert.DoesNotContain(
+            "Ride",
+            stats.ActivitiesByType.Keys);
+    }
+
+    [Fact]
     public async Task GetActivityStats_WithoutToken_ShouldReturnUnauthorized()
     {
         var response =
@@ -811,6 +1007,289 @@ public class ActivitiesApiTests
     }
 
     [Fact]
+    public async Task GetMine_WithFromDate_ShouldReturnActivitiesOnOrAfterDate()
+    {
+        await AuthenticateAsync(_client);
+
+        var olderResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    5,
+                    1800,
+                    300,
+                    new DateTime(
+                        2026,
+                        8,
+                        1,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)));
+
+        var newerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    7,
+                    2400,
+                    400,
+                    new DateTime(
+                        2026,
+                        8,
+                        15,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            olderResponse.StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            newerResponse.StatusCode);
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities?from=2026-08-10T00:00:00Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            7,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithToDate_ShouldReturnActivitiesOnOrBeforeDate()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    1,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                7,
+                2400,
+                400,
+                new DateTime(
+                    2026,
+                    8,
+                    15,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities?to=2026-08-10T00:00:00Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithDateRange_ShouldReturnActivitiesWithinRange()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                3,
+                1200,
+                200,
+                new DateTime(
+                    2026,
+                    7,
+                    31,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                7,
+                2400,
+                400,
+                new DateTime(
+                    2026,
+                    8,
+                    20,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities" +
+                "?from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
+    public async Task GetMine_WithTypeAndDateRange_ShouldApplyBothFilters()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50,
+                3600,
+                1000,
+                new DateTime(
+                    2026,
+                    8,
+                    10,
+                    12,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                8,
+                3000,
+                500,
+                new DateTime(
+                    2026,
+                    8,
+                    20,
+                    10,
+                    0,
+                    0,
+                    DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities" +
+                "?type=Run" +
+                "&from=2026-08-01T00:00:00Z" +
+                "&to=2026-08-15T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<PagedActivityResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Single(result.Items);
+
+        Assert.Equal(
+            "Run",
+            result.Items[0].Type);
+
+        Assert.Equal(
+            5,
+            result.Items[0].Distance);
+    }
+
+    [Fact]
     public async Task GetActivities_WithTypeFilter_ShouldReturnOnlyMatchingActivities()
     {
         await AuthenticateAsync(_client);
@@ -1171,5 +1650,347 @@ public class ActivitiesApiTests
         Assert.DoesNotContain(
             "Ride",
             stats.ActivitiesByType.Keys);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_ByDay_ShouldReturnDailyTotals()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Walk",
+                3.0,
+                1200,
+                100,
+                new DateTime(2026, 8, 20, 18, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                7.0,
+                2400,
+                400,
+                new DateTime(2026, 8, 21, 9, 0, 0, DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends?groupBy=day");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var trends =
+            await response.Content
+                .ReadFromJsonAsync<ActivityTrendResponse>();
+
+        Assert.NotNull(trends);
+
+        Assert.Equal(
+            "day",
+            trends.GroupBy);
+
+        Assert.Equal(
+            2,
+            trends.Items.Count);
+
+        var firstDay =
+            trends.Items.Single(
+                x => x.Date == new DateTime(2026, 8, 20));
+
+        Assert.Equal(2, firstDay.TotalActivities);
+        Assert.Equal(8.0, firstDay.TotalDistance);
+        Assert.Equal(3000, firstDay.TotalDurationSeconds);
+        Assert.Equal(400, firstDay.TotalCalories);
+
+        var secondDay =
+            trends.Items.Single(
+                x => x.Date == new DateTime(2026, 8, 21));
+
+        Assert.Equal(1, secondDay.TotalActivities);
+        Assert.Equal(7.0, secondDay.TotalDistance);
+        Assert.Equal(2400, secondDay.TotalDurationSeconds);
+        Assert.Equal(400, secondDay.TotalCalories);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_ByWeek_ShouldGroupActivitiesIntoWeeks()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(2026, 8, 17, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(2026, 8, 19, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                20.0,
+                5000,
+                800,
+                new DateTime(2026, 8, 24, 10, 0, 0, DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends?groupBy=week");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var trends =
+            await response.Content
+                .ReadFromJsonAsync<ActivityTrendResponse>();
+
+        Assert.NotNull(trends);
+
+        Assert.Equal(
+            2,
+            trends.Items.Count);
+
+        var firstWeek =
+            trends.Items.Single(
+                x => x.Date ==
+                    new DateTime(2026, 8, 17));
+
+        Assert.Equal(2, firstWeek.TotalActivities);
+        Assert.Equal(15.0, firstWeek.TotalDistance);
+        Assert.Equal(5400, firstWeek.TotalDurationSeconds);
+        Assert.Equal(900, firstWeek.TotalCalories);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_ByMonth_ShouldGroupActivitiesIntoMonths()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                500,
+                new DateTime(2026, 7, 15, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20.0,
+                7200,
+                1000,
+                new DateTime(2026, 8, 10, 10, 0, 0, DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends?groupBy=month");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var trends =
+            await response.Content
+                .ReadFromJsonAsync<ActivityTrendResponse>();
+
+        Assert.NotNull(trends);
+
+        Assert.Equal(
+            2,
+            trends.Items.Count);
+
+        var july =
+            trends.Items.Single(
+                x => x.Date ==
+                    new DateTime(2026, 7, 1));
+
+        Assert.Equal(1, july.TotalActivities);
+        Assert.Equal(10.0, july.TotalDistance);
+        Assert.Equal(3600, july.TotalDurationSeconds);
+        Assert.Equal(500, july.TotalCalories);
+
+        var august =
+            trends.Items.Single(
+                x => x.Date ==
+                    new DateTime(2026, 8, 1));
+
+        Assert.Equal(1, august.TotalActivities);
+        Assert.Equal(20.0, august.TotalDistance);
+        Assert.Equal(7200, august.TotalDurationSeconds);
+        Assert.Equal(1000, august.TotalCalories);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_WithType_ShouldOnlyIncludeMatchingActivities()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Ride",
+                50.0,
+                7200,
+                1000,
+                new DateTime(2026, 8, 20, 12, 0, 0, DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends?groupBy=day&type=Run");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var trends =
+            await response.Content
+                .ReadFromJsonAsync<ActivityTrendResponse>();
+
+        Assert.NotNull(trends);
+
+        Assert.Single(trends.Items);
+
+        Assert.Equal(
+            1,
+            trends.Items[0].TotalActivities);
+
+        Assert.Equal(
+            5.0,
+            trends.Items[0].TotalDistance);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_WithDateRange_ShouldOnlyIncludeActivitiesInRange()
+    {
+        await AuthenticateAsync(_client);
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                5.0,
+                1800,
+                300,
+                new DateTime(2026, 8, 10, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                10.0,
+                3600,
+                600,
+                new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc)));
+
+        await _client.PostAsJsonAsync(
+            "/api/activities",
+            new CreateActivityRequest(
+                "Run",
+                20.0,
+                7200,
+                1000,
+                new DateTime(2026, 8, 30, 10, 0, 0, DateTimeKind.Utc)));
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends" +
+                "?groupBy=day" +
+                "&from=2026-08-15T00:00:00Z" +
+                "&to=2026-08-25T23:59:59Z");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var trends =
+            await response.Content
+                .ReadFromJsonAsync<ActivityTrendResponse>();
+
+        Assert.NotNull(trends);
+
+        Assert.Single(trends.Items);
+
+        Assert.Equal(
+            10.0,
+            trends.Items[0].TotalDistance);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_WithInvalidGroupBy_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends?groupBy=year");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_WithInvalidDateRange_ShouldReturnBadRequest()
+    {
+        await AuthenticateAsync(_client);
+
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends" +
+                "?from=2026-08-25T00:00:00Z" +
+                "&to=2026-08-20T00:00:00Z");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivityTrends_WithoutToken_ShouldReturnUnauthorized()
+    {
+        var response =
+            await _client.GetAsync(
+                "/api/activities/trends");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 }

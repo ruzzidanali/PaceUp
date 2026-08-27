@@ -32,4 +32,12 @@ public interface IAuthenticationService
     Task ResendVerificationAsync(
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<RefreshTokenResponse> RefreshAsync(
+        string refreshToken,
+        CancellationToken cancellationToken);
+
+    Task RevokeRefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken); 
 }

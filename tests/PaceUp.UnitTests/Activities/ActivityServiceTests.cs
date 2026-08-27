@@ -53,6 +53,7 @@ public class ActivityServiceTests
         var result =
             await service.GetStatsAsync(
                 user.Id,
+                new ActivityListRequest(),
                 CancellationToken.None);
 
         Assert.Equal(
@@ -115,6 +116,7 @@ public class ActivityServiceTests
         var result =
             await service.GetStatsAsync(
                 user.Id,
+                new ActivityListRequest(),
                 CancellationToken.None);
 
         Assert.Equal(
@@ -672,6 +674,8 @@ public class ActivityServiceTests
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
+        public DbSet<Follow> Follows { get; } = null!;
+
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
@@ -681,21 +685,32 @@ public class ActivityServiceTests
         public DbSet<PasswordResetToken> PasswordResetTokens =>
             Set<PasswordResetToken>();
 
+        public DbSet<RefreshToken> RefreshTokens { get; } = null!;
+
+        public DbSet<Notification> Notifications =>
+            Set<Notification>();
+
+        public DbSet<Challenge> Challenges =>
+            Set<Challenge>();
+
+        public DbSet<ChallengeParticipant> ChallengeParticipants =>
+            Set<ChallengeParticipant>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
-            {
-                modelBuilder.Entity<User>()
-                    .HasKey(x => x.Id);
+        {
+            modelBuilder.Entity<User>()
+                .HasKey(x => x.Id);
 
-                modelBuilder.Entity<UserIdentity>()
-                    .HasKey(x => x.UserId);
+            modelBuilder.Entity<UserIdentity>()
+                .HasKey(x => x.UserId);
 
-                modelBuilder.Entity<Activity>()
-                    .HasKey(x => x.Id);
+            modelBuilder.Entity<Activity>()
+                .HasKey(x => x.Id);
 
-                modelBuilder.Entity<EmailVerificationToken>()
-                    .HasKey(x => x.Id);
-            }
+            modelBuilder.Entity<EmailVerificationToken>()
+                .HasKey(x => x.Id);
+        }
     }
 
     [Fact]

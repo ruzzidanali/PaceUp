@@ -21,6 +21,7 @@ public interface IActivityService
 
     Task<ActivityStatsResponse> GetStatsAsync(
         Guid userId,
+        ActivityListRequest request,
         CancellationToken cancellationToken);
 
     Task<ActivityResponse?> UpdateAsync(
@@ -32,5 +33,10 @@ public interface IActivityService
     Task<bool> DeleteAsync(
         Guid userId,
         Guid activityId,
+        CancellationToken cancellationToken);
+
+    Task<ActivityTrendResponse> GetTrendsAsync(
+        Guid userId,
+        ActivityTrendRequest request,
         CancellationToken cancellationToken);
 }
