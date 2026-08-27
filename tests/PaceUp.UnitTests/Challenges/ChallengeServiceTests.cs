@@ -4,6 +4,8 @@ using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.DTOs.Challenges;
 using PaceUp.Application.Exceptions;
 using PaceUp.Application.Features.Challenges;
+using PaceUp.Application.Features.Notifications;
+using PaceUp.Domain.Constants;
 using PaceUp.Domain.Entities;
 
 namespace PaceUp.UnitTests.Challenges;
@@ -1209,10 +1211,119 @@ public class ChallengeServiceTests
             username);
     }
 
-    private static ChallengeService CreateService(
-        TestDbContext db)
+    [Fact]
+    public async Task JoinAsync_ShouldCreateNotificationForChallengeCreator()
     {
-        return new ChallengeService(db);
+        using var db = CreateDatabase();
+
+        var creator = new User(
+            "challenge_creator",
+            "creator@example.com",
+            "Challenge Creator");
+
+        var participant = new User(
+            "challenge_participant",
+            "participant@example.com",
+            "Challenge Participant");
+
+        db.Users.AddRange(
+            creator,
+            participant);
+
+        await db.SaveChangesAsync();
+
+        var challenge = new Challenge(
+            creator.Id,
+            "Join Challenge",
+            "Join this challenge.",
+            ChallengeTypes.Distance,
+            50,
+            DateTime.UtcNow.AddDays(-1),
+            DateTime.UtcNow.AddDays(7));
+
+        db.Challenges.Add(challenge);
+
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result =
+            await service.JoinAsync(
+                participant.Id,
+                challenge.Id,
+                CancellationToken.None);
+
+        Assert.True(result);
+
+        var notification =
+            await db.Notifications
+                .SingleOrDefaultAsync(
+                    x =>
+                        x.RecipientUserId == creator.Id &&
+                        x.ActorUserId == participant.Id &&
+                        x.Type == NotificationTypes.ChallengeJoined);
+
+        Assert.NotNull(notification);
+
+        Assert.False(notification.IsRead);
+    }
+
+    [Fact]
+public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
+{
+    using var db = CreateDatabase();
+
+    var creator = new User(
+        "challenge_owner",
+        "owner@example.com",
+        "Challenge Owner");
+
+    db.Users.Add(creator);
+
+    await db.SaveChangesAsync();
+
+    var challenge = new Challenge(
+        creator.Id,
+        "Own Challenge",
+        "My own challenge.",
+        ChallengeTypes.Distance,
+        50,
+        DateTime.UtcNow.AddDays(-1),
+        DateTime.UtcNow.AddDays(7));
+
+    db.Challenges.Add(challenge);
+
+    await db.SaveChangesAsync();
+
+    var service = CreateService(db);
+
+    var result =
+        await service.JoinAsync(
+            creator.Id,
+            challenge.Id,
+            CancellationToken.None);
+
+    Assert.True(result);
+
+    var notifications =
+        await db.Notifications
+            .Where(
+                x =>
+                    x.RecipientUserId == creator.Id)
+            .ToListAsync();
+
+    Assert.Empty(notifications);
+}
+
+    private static ChallengeService CreateService(
+    TestDbContext db)
+    {
+        var notificationService =
+            new NotificationService(db);
+
+        return new ChallengeService(
+            db,
+            notificationService);
     }
 
     private static TestDbContext CreateDatabase()

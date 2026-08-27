@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.Application.DTOs.Challenges;
 using PaceUp.Application.DTOs.Users;
+using PaceUp.Application.DTOs.Notifications;
 using PaceUp.Infrastructure.Persistence;
 using PaceUp.IntegrationTests.Infrastructure;
 
@@ -449,6 +450,69 @@ public class ChallengesApiTests
         Assert.Equal(
             1,
             challenge.ParticipantCount);
+    }
+
+    [Fact]
+    public async Task JoinChallenge_ShouldCreateNotificationForChallengeCreator()
+    {
+        var creatorToken =
+            await RegisterAndLoginAsync(
+                "challenge_notification_creator",
+                "challenge_notification_creator@example.com");
+
+        SetBearerToken(creatorToken);
+
+        var created =
+            await CreateChallengeAsync(
+                "Notification Challenge",
+                "Challenge notification test.",
+                "Distance",
+                50);
+
+        var participantToken =
+            await RegisterAndLoginAsync(
+                "challenge_notification_user",
+                "challenge_notification_user@example.com");
+
+        SetBearerToken(participantToken);
+
+        var joinResponse =
+            await _client.PostAsync(
+                $"/api/challenges/{created.Id}/join",
+                null);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            joinResponse.StatusCode);
+
+        SetBearerToken(creatorToken);
+
+        var response =
+            await _client.GetAsync(
+                "/api/notifications");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var notifications =
+            await response.Content
+                .ReadFromJsonAsync<
+                    IReadOnlyList<NotificationResponse>>();
+
+        Assert.NotNull(notifications);
+
+        Assert.Single(notifications);
+
+        var notification =
+            notifications[0];
+
+        Assert.Equal(
+            "ChallengeJoined",
+            notification.Type);
+
+        Assert.False(
+            notification.IsRead);
     }
 
     [Fact]
