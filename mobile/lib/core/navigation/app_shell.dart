@@ -4,6 +4,7 @@ import '../../features/auth/services/auth_state.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/activities/screens/activities_screen.dart';
+import '../../features/goals/screens/goals_screen.dart';
 
 class AppShell extends StatefulWidget {
   final AuthController authController;
@@ -62,11 +63,7 @@ class _AppShellState extends State<AppShell> {
     final pages = [
       HomeScreen(authController: widget.authController),
       const ActivitiesScreen(),
-      const _PlaceholderPage(
-        icon: Icons.flag_rounded,
-        title: 'Goals',
-        message: 'Your running goals will appear here.',
-      ),
+      const GoalsScreen(),
       const _PlaceholderPage(
         icon: Icons.emoji_events_rounded,
         title: 'Challenges',
