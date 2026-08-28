@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'api_config.dart';
 
@@ -45,6 +46,44 @@ class ApiClient {
       Uri.parse('${ApiConfig.baseUrl}$path'),
       headers: _headers(token),
     );
+  }
+
+  Future<http.Response> postMultipart(
+    String path, {
+    required String fileField,
+    required String filePath,
+    String? contentType,
+    String? token,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('${ApiConfig.baseUrl}$path'),
+    );
+
+    request.headers.addAll({
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+
+    MediaType? mediaType;
+
+    if (contentType != null && contentType.contains('/')) {
+      final parts = contentType.split('/');
+
+      mediaType = MediaType(parts[0], parts[1]);
+    }
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        fileField,
+        filePath,
+        contentType: mediaType,
+      ),
+    );
+
+    final streamedResponse = await request.send();
+
+    return http.Response.fromStream(streamedResponse);
   }
 
   Map<String, String> _headers(String? token) {

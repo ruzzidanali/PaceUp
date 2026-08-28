@@ -6,6 +6,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/activities/screens/activities_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/challenges/screens/challenges_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 
 class AppShell extends StatefulWidget {
   final AuthController authController;
@@ -66,11 +67,7 @@ class _AppShellState extends State<AppShell> {
       const ActivitiesScreen(),
       const GoalsScreen(),
       const ChallengesScreen(),
-      const _PlaceholderPage(
-        icon: Icons.person_rounded,
-        title: 'Profile',
-        message: 'Your profile will appear here.',
-      ),
+      ProfileScreen(),
     ];
 
     return Scaffold(
@@ -116,37 +113,6 @@ class _AppShellState extends State<AppShell> {
             label: 'Profile',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderPage extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-
-  const _PlaceholderPage({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 64),
-            const SizedBox(height: 20),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-          ],
-        ),
       ),
     );
   }
