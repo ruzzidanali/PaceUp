@@ -21,3 +21,5 @@ node_modules/
 .flutter-plugins-dependencies
 .packages
 build/
+# User-uploaded profile images
+src/PaceUp.Api/wwwroot/uploads/
