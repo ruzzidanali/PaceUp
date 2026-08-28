@@ -5,6 +5,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/activities/screens/activities_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
+import '../../features/challenges/screens/challenges_screen.dart';
 
 class AppShell extends StatefulWidget {
   final AuthController authController;
@@ -64,11 +65,7 @@ class _AppShellState extends State<AppShell> {
       HomeScreen(authController: widget.authController),
       const ActivitiesScreen(),
       const GoalsScreen(),
-      const _PlaceholderPage(
-        icon: Icons.emoji_events_rounded,
-        title: 'Challenges',
-        message: 'Your challenges will appear here.',
-      ),
+      const ChallengesScreen(),
       const _PlaceholderPage(
         icon: Icons.person_rounded,
         title: 'Profile',
