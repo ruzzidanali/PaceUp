@@ -245,6 +245,20 @@ public class UserService : IUserService
         return true;
     }
 
+    public async Task<bool> IsFollowingAsync(
+    Guid followerId,
+    Guid followingId,
+    CancellationToken cancellationToken)
+    {
+        return await _dbContext.Follows
+            .AsNoTracking()
+            .AnyAsync(
+                x =>
+                    x.FollowerId == followerId &&
+                    x.FollowingId == followingId,
+                cancellationToken);
+    }
+
     public async Task<FollowListResponse?> GetFollowersAsync(
         Guid userId,
         CancellationToken cancellationToken)
@@ -324,4 +338,41 @@ public class UserService : IUserService
             users,
             users.Count);
     }
+
+    public async Task<IReadOnlyList<UserSearchResponse>> SearchAsync(
+    Guid currentUserId,
+    string query,
+    CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return [];
+        }
+
+        var normalizedQuery = query.Trim().ToLower();
+
+        var users =
+            await _dbContext.Users
+                .AsNoTracking()
+                .Where(
+                    x =>
+                        x.Id != currentUserId &&
+                        (
+                            x.Username.ToLower().Contains(normalizedQuery) ||
+                            x.DisplayName.ToLower().Contains(normalizedQuery)
+                        ))
+                .OrderBy(x => x.Username)
+                .Take(20)
+                .Select(
+                    x =>
+                        new UserSearchResponse(
+                            x.Id,
+                            x.Username,
+                            x.DisplayName,
+                            x.ProfileImageUrl))
+                .ToListAsync(cancellationToken);
+
+        return users;
+    }
 }
+

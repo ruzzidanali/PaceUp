@@ -3,6 +3,9 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/profile_models.dart';
 import '../services/profile_service.dart';
+import '../../social/screens/followers_screen.dart';
+import '../../social/screens/following_screen.dart';
+import '../../social/screens/user_search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ProfileService? profileService;
@@ -351,7 +354,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.people_outline),
+                  title: const Text('Followers'),
+                  subtitle: const Text('View people who follow you'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FollowersScreen(userId: user.id),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt_1_outlined),
+                  title: const Text('Following'),
+                  subtitle: const Text('View people you follow'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FollowingScreen(userId: user.id),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UserSearchScreen()),
+                );
+              },
+              icon: const Icon(Icons.person_search_rounded),
+              label: const Text('Find Users'),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           FilledButton.icon(
             onPressed: _editProfile,
             icon: const Icon(Icons.edit_outlined),

@@ -308,4 +308,54 @@ public class UsersController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("{id:guid}/follow-status")]
+    [ProducesResponseType(
+    typeof(FollowStatusResponse),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(
+    StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FollowStatusResponse>> GetFollowStatus(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var user = await _userService.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var isFollowing =
+            await _userService.IsFollowingAsync(
+                userId,
+                id,
+                cancellationToken);
+
+        return Ok(
+            new FollowStatusResponse(isFollowing));
+    }
+
+    [HttpGet("search")]
+    [ProducesResponseType(
+    typeof(IReadOnlyList<UserSearchResponse>),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<UserSearchResponse>>> Search(
+    [FromQuery] string query,
+    CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var users =
+            await _userService.SearchAsync(
+                userId,
+                query,
+                cancellationToken);
+
+        return Ok(users);
+    }
 }

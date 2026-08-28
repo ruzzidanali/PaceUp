@@ -36,6 +36,16 @@ public interface IUserService
         Guid followingId,
         CancellationToken cancellationToken);
 
+    Task<bool> IsFollowingAsync(
+        Guid followerId,
+        Guid followingId,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<UserSearchResponse>> SearchAsync(
+        Guid currentUserId,
+        string query,
+        CancellationToken cancellationToken);
+
     Task<FollowListResponse?> GetFollowersAsync(
         Guid userId,
         CancellationToken cancellationToken);

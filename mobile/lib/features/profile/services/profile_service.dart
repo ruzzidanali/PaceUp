@@ -41,6 +41,23 @@ class ProfileService {
     );
   }
 
+  Future<UserResponse> getUser(String userId) async {
+    final accessToken = await _getAccessToken();
+
+    final response = await _apiClient.get('/users/$userId', token: accessToken);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load user profile: '
+        '${response.statusCode} ${response.body}',
+      );
+    }
+
+    return UserResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
   Future<UserResponse> updateProfile(UpdateProfileRequest request) async {
     final accessToken = await _getAccessToken();
 
