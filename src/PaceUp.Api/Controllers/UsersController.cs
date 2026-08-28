@@ -3,6 +3,8 @@ using PaceUp.Application.Abstractions.Users;
 using PaceUp.Application.DTOs.Users;
 using Microsoft.AspNetCore.Authorization;
 using PaceUp.Api.Extensions;
+using Microsoft.AspNetCore.Http;
+using System.IO;
 
 namespace PaceUp.Api.Controllers;
 
@@ -103,26 +105,88 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    [HttpPut("me/profile-image")]
+    [HttpPost("me/profile-image")]
     [ProducesResponseType(
     typeof(UserResponse),
     StatusCodes.Status200OK)]
     [ProducesResponseType(
+    StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
     StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserResponse>> UpdateProfileImage(
-    [FromBody] UpdateProfileImageRequest request,
+    IFormFile file,
     CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
 
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("Profile image is required.");
+        }
+
+        const long maxFileSize = 5 * 1024 * 1024;
+
+        if (file.Length > maxFileSize)
+        {
+            return BadRequest(
+                "Profile image must be 5 MB or smaller.");
+        }
+
+        var contentType = file.ContentType
+            .Trim()
+            .ToLowerInvariant();
+
+        var extension = contentType switch
+        {
+            "image/jpeg" => ".jpg",
+            "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            "image/heic" => ".heic",
+            "image/heif" => ".heif",
+            _ => null,
+        };
+
+        if (extension is null)
+        {
+            return BadRequest(
+                $"Unsupported image type: {file.ContentType}");
+        }
+
+        var uploadsPath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot",
+            "uploads",
+            "profile-images");
+
+        Directory.CreateDirectory(uploadsPath);
+
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+
+        var filePath = Path.Combine(
+            uploadsPath,
+            fileName);
+
+        await using (var stream = System.IO.File.Create(filePath))
+        {
+            await file.CopyToAsync(
+                stream,
+                cancellationToken);
+        }
+
+        var imageUrl =
+            $"{Request.Scheme}://{Request.Host}/uploads/profile-images/{fileName}";
+
         var user =
             await _userService.UpdateProfileImageAsync(
                 userId,
-                request,
+                new UpdateProfileImageRequest(imageUrl),
                 cancellationToken);
 
         if (user is null)
         {
+            System.IO.File.Delete(filePath);
+
             return NotFound();
         }
 

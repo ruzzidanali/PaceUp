@@ -83,6 +83,7 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
+    app.UseStaticFiles();
 }
 
 app.UseAuthentication();
