@@ -16,6 +16,8 @@ using PaceUp.Application.Abstractions.Notifications;
 using PaceUp.Application.Features.Notifications;
 using PaceUp.Application.Abstractions.Challenges;
 using PaceUp.Application.Features.Challenges;
+using PaceUp.Application.Abstractions.Kudos;
+using PaceUp.Application.Features.Kudos;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -42,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
 
         services.AddScoped<IChallengeService, ChallengeService>();
+
+        services.AddScoped<IKudosService, KudosService>();
 
         return services;
     }

@@ -52,6 +52,7 @@ public class PaceUpIntegrationFixture : IAsyncLifetime
             new NpgsqlCommand(
                 """
             TRUNCATE TABLE
+                kudos,
                 challenge_participants,
                 challenges,
                 notifications,

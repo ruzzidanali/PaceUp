@@ -180,6 +180,9 @@ public class UserServiceTests
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
+            Set<PaceUp.Domain.Entities.Kudos>();
+
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();
 

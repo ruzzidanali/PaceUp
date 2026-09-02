@@ -360,6 +360,9 @@ public class NotificationServiceTests
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
+            Set<PaceUp.Domain.Entities.Kudos>();
+
         public DbSet<Goal> Goals =>
             Set<Goal>();
 

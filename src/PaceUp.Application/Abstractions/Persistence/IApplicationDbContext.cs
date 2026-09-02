@@ -11,6 +11,8 @@ public interface IApplicationDbContext
 
     DbSet<Activity> Activities { get; }
 
+    DbSet<PaceUp.Domain.Entities.Kudos> Kudos { get; }
+
     DbSet<Goal> Goals { get; }
 
     DbSet<EmailVerificationToken> EmailVerificationTokens { get; }
