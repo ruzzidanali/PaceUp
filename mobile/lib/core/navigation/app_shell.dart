@@ -4,6 +4,7 @@ import '../../features/auth/services/auth_state.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/activities/screens/activities_screen.dart';
+import '../../features/feed/screens/feed_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/challenges/screens/challenges_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
@@ -22,6 +23,7 @@ class _AppShellState extends State<AppShell> {
 
   final _titles = const [
     'Home',
+    'Feed',
     'Activities',
     'Goals',
     'Challenges',
@@ -41,7 +43,9 @@ class _AppShellState extends State<AppShell> {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => LoginScreen(authController: widget.authController),
+            builder: (_) => LoginScreen(
+              authController: widget.authController,
+            ),
           ),
           (route) => false,
         );
@@ -53,7 +57,9 @@ class _AppShellState extends State<AppShell> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -64,6 +70,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomeScreen(authController: widget.authController),
+      const FeedScreen(),
       const ActivitiesScreen(),
       const GoalsScreen(),
       const ChallengesScreen(),
@@ -82,7 +89,10 @@ class _AppShellState extends State<AppShell> {
             ),
         ],
       ),
-      body: IndexedStack(index: _currentIndex, children: pages),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: _onNavigationChanged,
@@ -91,6 +101,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.dynamic_feed_outlined),
+            selectedIcon: Icon(Icons.dynamic_feed),
+            label: 'Feed',
           ),
           NavigationDestination(
             icon: Icon(Icons.directions_run_outlined),
