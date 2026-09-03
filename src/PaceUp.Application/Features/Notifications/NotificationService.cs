@@ -20,13 +20,15 @@ public class NotificationService : INotificationService
     Guid recipientUserId,
     Guid actorUserId,
     string type,
+    Guid? targetId,
     CancellationToken cancellationToken)
     {
         var notification =
             new Notification(
                 recipientUserId,
                 actorUserId,
-                type);
+                type,
+                targetId);
 
         _dbContext.Notifications.Add(
             notification);
@@ -55,6 +57,7 @@ public class NotificationService : INotificationService
                             x.ActorUser.Username,
                             x.ActorUser.DisplayName,
                             x.ActorUser.ProfileImageUrl,
+                            x.TargetId,
                             x.CreatedAt))
                 .ToListAsync(cancellationToken);
 

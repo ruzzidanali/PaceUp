@@ -210,7 +210,8 @@ public class UserService : IUserService
         await _notificationService.CreateAsync(
             followingId,
             followerId,
-            "NewFollower",
+            NotificationTypes.NewFollower,
+            null,
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(

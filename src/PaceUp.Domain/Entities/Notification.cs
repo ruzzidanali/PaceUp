@@ -20,14 +20,17 @@ public class Notification
 
     public User ActorUser { get; private set; } = null!;
 
+    public Guid? TargetId { get; private set; }
+
     private Notification()
     {
     }
 
     public Notification(
-        Guid recipientUserId,
-        Guid actorUserId,
-        string type)
+    Guid recipientUserId,
+    Guid actorUserId,
+    string type,
+    Guid? targetId = null)
     {
         if (!NotificationTypes.IsValid(type))
         {
@@ -48,6 +51,7 @@ public class Notification
         RecipientUserId = recipientUserId;
         ActorUserId = actorUserId;
         Type = type;
+        TargetId = targetId;
 
         IsRead = false;
         CreatedAt = DateTime.UtcNow;

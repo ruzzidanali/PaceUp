@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../models/notification_models.dart';
 import '../services/notification_service.dart';
 import '../widgets/notification_tile.dart';
+import '../../activities/screens/activity_details_screen.dart';
+import '../../activities/services/activity_service.dart';
+import '../../social/screens/user_profile_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -13,6 +16,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
+  final ActivityService _activityService = ActivityService();
 
   List<NotificationResponse> _notifications = [];
   bool _isLoading = true;
@@ -92,6 +96,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _openNotification(NotificationResponse notification) async {
+    // Mark as read first.
     if (!notification.isRead) {
       try {
         await _notificationService.markAsRead(notification.id);
@@ -119,13 +124,75 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
+
+        return;
       }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    switch (notification.type) {
+      case 'ActivityKudos':
+        await _openActivityNotification(notification);
+        break;
+
+      case 'NewFollower':
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                UserProfileScreen(userId: notification.actorUserId.toString()),
+          ),
+        );
+        break;
+    }
+  }
+
+  Future<void> _openActivityNotification(
+    NotificationResponse notification,
+  ) async {
+    final targetId = notification.targetId;
+
+    if (targetId == null || targetId.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This activity is no longer available.')),
+      );
+
+      return;
+    }
+
+    try {
+      final activity = await _activityService.getActivity(targetId);
+
+      if (!mounted) {
+        return;
+      }
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ActivityDetailsScreen(activity: activity),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
   }
 
   @override
   void dispose() {
     _notificationService.dispose();
+    _activityService.dispose();
     super.dispose();
   }
 

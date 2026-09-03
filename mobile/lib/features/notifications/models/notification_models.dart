@@ -7,6 +7,7 @@ class NotificationResponse {
   final String actorDisplayName;
   final String? actorProfileImageUrl;
   final DateTime createdAt;
+  final String? targetId;
 
   const NotificationResponse({
     required this.id,
@@ -17,6 +18,7 @@ class NotificationResponse {
     required this.actorDisplayName,
     required this.actorProfileImageUrl,
     required this.createdAt,
+    required this.targetId,
   });
 
   factory NotificationResponse.fromJson(Map<String, dynamic> json) {
@@ -29,12 +31,11 @@ class NotificationResponse {
       actorDisplayName: json['actorDisplayName'] as String,
       actorProfileImageUrl: json['actorProfileImageUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      targetId: json['targetId'] as String?,
     );
   }
 
-  NotificationResponse copyWith({
-    bool? isRead,
-  }) {
+  NotificationResponse copyWith({bool? isRead}) {
     return NotificationResponse(
       id: id,
       type: type,
@@ -44,6 +45,7 @@ class NotificationResponse {
       actorDisplayName: actorDisplayName,
       actorProfileImageUrl: actorProfileImageUrl,
       createdAt: createdAt,
+      targetId: targetId,
     );
   }
 }

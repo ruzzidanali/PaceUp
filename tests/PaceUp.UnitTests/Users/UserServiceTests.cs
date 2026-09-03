@@ -720,6 +720,7 @@ public class UserServiceTests
             Guid recipientUserId,
             Guid actorUserId,
             string type,
+            Guid? targetId,
             CancellationToken cancellationToken)
         {
             Calls.Add(
