@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../features/auth/services/auth_state.dart';
 import '../../features/home/screens/home_screen.dart';
-import '../../features/auth/screens/login_screen.dart';
 import '../../features/activities/screens/activities_screen.dart';
 import '../../features/feed/screens/feed_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/challenges/screens/challenges_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/notifications/services/notification_service.dart';
 
 class AppShell extends StatefulWidget {
   final AuthController authController;
 
-  const AppShell({super.key, required this.authController});
+  const AppShell({
+    super.key,
+    required this.authController,
+  });
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -20,6 +24,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+
+  final NotificationService _notificationService = NotificationService();
+
+  int _unreadNotificationCount = 0;
 
   final _titles = const [
     'Home',
@@ -30,63 +38,87 @@ class _AppShellState extends State<AppShell> {
     'Profile',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+
+    _loadUnreadNotificationCount();
+  }
+
+  @override
+  void dispose() {
+    _notificationService.dispose();
+
+    super.dispose();
+  }
+
+  Future<void> _loadUnreadNotificationCount() async {
+    try {
+      final notifications =
+          await _notificationService.getNotifications();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _unreadNotificationCount = notifications
+            .where((notification) => !notification.isRead)
+            .length;
+      });
+    } catch (_) {
+      // Notifications should not prevent the app shell from loading.
+    }
+  }
+
   void _onNavigationChanged(int index) {
     setState(() {
       _currentIndex = index;
     });
   }
 
-  Future<void> _logout() async {
-    try {
-      await widget.authController.logout();
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    );
 
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => LoginScreen(
-              authController: widget.authController,
-            ),
-          ),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    await _loadUnreadNotificationCount();
   }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeScreen(authController: widget.authController),
+      HomeScreen(
+        authController: widget.authController,
+      ),
       const FeedScreen(),
       const ActivitiesScreen(),
       const GoalsScreen(),
       const ChallengesScreen(),
-      ProfileScreen(),
+      ProfileScreen(authController: widget.authController),
     ];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
         actions: [
-          if (_currentIndex == 0)
-            IconButton(
-              onPressed: _logout,
-              tooltip: 'Logout',
-              icon: const Icon(Icons.logout),
+          IconButton(
+            onPressed: _openNotifications,
+            tooltip: 'Notifications',
+            icon: Badge(
+              isLabelVisible: _unreadNotificationCount > 0,
+              label: Text(
+                _unreadNotificationCount > 99
+                    ? '99+'
+                    : _unreadNotificationCount.toString(),
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+              ),
             ),
+          ),
         ],
       ),
       body: IndexedStack(

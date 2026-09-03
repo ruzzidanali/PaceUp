@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/feed_models.dart';
 import '../services/feed_service.dart';
 import '../widgets/feed_activity_card.dart';
+import '../../profile/services/profile_service.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -14,6 +15,7 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   final FeedService _feedService = FeedService();
   final ScrollController _scrollController = ScrollController();
+  final ProfileService _profileService = ProfileService();
 
   final List<FeedActivityResponse> _activities = [];
 
@@ -21,6 +23,7 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _isRefreshing = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
+  String? _currentUserId;
 
   int _currentPage = 1;
   int _totalPages = 0;
@@ -34,36 +37,43 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Future<void> _loadFeed() async {
+  if (!mounted) return;
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final currentUser = await _profileService.getMe();
+
+    final response = await _feedService.getFeed(
+      page: 1,
+      pageSize: 20,
+    );
+
     if (!mounted) return;
 
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _currentUserId = currentUser.id;
+
+      _activities
+        ..clear()
+        ..addAll(response.activities);
+
+      _currentPage = response.page;
+      _totalPages = response.totalPages;
+      _isLoading = false;
     });
+  } catch (error) {
+    if (!mounted) return;
 
-    try {
-      final response = await _feedService.getFeed(page: 1, pageSize: 20);
-
-      if (!mounted) return;
-
-      setState(() {
-        _activities
-          ..clear()
-          ..addAll(response.activities);
-
-        _currentPage = response.page;
-        _totalPages = response.totalPages;
-        _isLoading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error.toString();
-      });
-    }
+    setState(() {
+      _isLoading = false;
+      _errorMessage = error.toString();
+    });
   }
+}
 
   Future<void> _refreshFeed() async {
     if (_isRefreshing) return;
@@ -149,13 +159,14 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    _feedService.dispose();
+void dispose() {
+  _scrollController.removeListener(_onScroll);
+  _scrollController.dispose();
+  _feedService.dispose();
+  _profileService.dispose();
 
-    super.dispose();
-  }
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +210,10 @@ class _FeedScreenState extends State<FeedScreen> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: FeedActivityCard(activity: activity),
+            child: FeedActivityCard(
+  activity: activity,
+  currentUserId: _currentUserId,
+),
           );
         },
       ),

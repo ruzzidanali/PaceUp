@@ -6,11 +6,14 @@ import '../services/profile_service.dart';
 import '../../social/screens/followers_screen.dart';
 import '../../social/screens/following_screen.dart';
 import '../../social/screens/user_search_screen.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../auth/services/auth_state.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ProfileService? profileService;
+  final AuthController? authController;
 
-  const ProfileScreen({super.key, this.profileService});
+  const ProfileScreen({super.key, this.profileService, this.authController});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -170,6 +173,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Text('Profile image updated.'),
           behavior: SnackBarBehavior.floating,
         ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Logout?'),
+          content: const Text('Are you sure you want to logout of PaceUp?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final authController = widget.authController;
+
+    if (authController == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logout is currently unavailable.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await authController.logout();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(authController: authController),
+        ),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) {
@@ -414,11 +485,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Delete Account'),
-              subtitle: const Text('Permanently delete your account'),
-              onTap: _deleteAccount,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.logout_outlined),
+                  title: const Text('Logout'),
+                  subtitle: const Text('Sign out of your PaceUp account'),
+                  onTap: _logout,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: const Text('Delete Account'),
+                  subtitle: const Text('Permanently delete your account'),
+                  onTap: _deleteAccount,
+                ),
+              ],
             ),
           ),
         ],
