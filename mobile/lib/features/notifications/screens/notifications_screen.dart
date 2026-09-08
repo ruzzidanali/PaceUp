@@ -138,6 +138,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         await _openActivityNotification(notification);
         break;
 
+      case 'ActivityComment':
+        await _openActivityNotification(notification);
+        break;
+
       case 'NewFollower':
         await Navigator.of(context).push(
           MaterialPageRoute(
