@@ -16,6 +16,8 @@ class NotificationTile extends StatelessWidget {
     switch (notification.type) {
       case 'ActivityKudos':
         return 'gave kudos to your activity';
+      case 'ActivityComment':
+        return 'commented on your activity';
       case 'NewFollower':
         return 'started following you';
       default:
