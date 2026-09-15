@@ -176,12 +176,43 @@ public class ActivityService : IActivityService
                     x => x.Count,
                     cancellationToken);
 
+        var bestSpeedMetersPerSecond = await _dbContext.ActivityPoints
+    .AsNoTracking()
+    .Where(x =>
+        x.Speed.HasValue &&
+        x.Speed.Value > 0 &&
+        query.Select(activity => activity.Id).Contains(x.ActivityId))
+    .Select(x => x.Speed)
+    .MaxAsync(cancellationToken);
+
+        var averageSpeedKmh =
+            ActivityPerformanceCalculator.CalculateAverageSpeedKmh(
+                totalDistance,
+                totalDurationSeconds);
+
+        var averagePaceSecondsPerKm =
+            ActivityPerformanceCalculator.CalculateAveragePaceSecondsPerKm(
+                totalDistance,
+                totalDurationSeconds);
+
+        var bestSpeedKmh =
+            ActivityPerformanceCalculator.CalculateBestSpeedKmh(
+                bestSpeedMetersPerSecond);
+
+        var bestPaceSecondsPerKm =
+            ActivityPerformanceCalculator.CalculateBestPaceSecondsPerKm(
+                bestSpeedKmh);
+
         return new ActivityStatsResponse(
-            TotalActivities: totalActivities,
-            TotalDistance: totalDistance,
-            TotalDurationSeconds: totalDurationSeconds,
-            TotalCalories: totalCalories,
-            ActivitiesByType: activitiesByType);
+    totalActivities,
+    totalDistance,
+    totalDurationSeconds,
+    totalCalories,
+    activitiesByType,
+    averageSpeedKmh,
+    averagePaceSecondsPerKm,
+    bestSpeedKmh,
+    bestPaceSecondsPerKm);
     }
 
     public async Task<ActivityResponse?> UpdateAsync(
@@ -326,14 +357,30 @@ public class ActivityService : IActivityService
     }
 
     private static ActivityTrendItemResponse MapTrendItem(
-        IGrouping<DateTime, Activity> group)
+    IGrouping<DateTime, Activity> group)
     {
+        var totalDistance = group.Sum(x => x.Distance);
+        var totalDurationSeconds = group.Sum(x => x.DurationSeconds);
+        var totalCalories = group.Sum(x => x.Calories ?? 0);
+
+        var averageSpeedKmh =
+            ActivityPerformanceCalculator.CalculateAverageSpeedKmh(
+                totalDistance,
+                totalDurationSeconds);
+
+        var averagePaceSecondsPerKm =
+            ActivityPerformanceCalculator.CalculateAveragePaceSecondsPerKm(
+                totalDistance,
+                totalDurationSeconds);
+
         return new ActivityTrendItemResponse(
             group.Key,
             group.Count(),
-            group.Sum(x => x.Distance),
-            group.Sum(x => x.DurationSeconds),
-            group.Sum(x => x.Calories ?? 0));
+            totalDistance,
+            totalDurationSeconds,
+            totalCalories,
+            averageSpeedKmh,
+            averagePaceSecondsPerKm);
     }
 
     private static ActivityResponse Map(

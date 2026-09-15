@@ -19,23 +19,54 @@ public class CommentService : ICommentService
         _notificationService = notificationService;
     }
 
-    public async Task<IReadOnlyList<CommentResponse>> GetAsync(Guid userId, Guid activityId, CancellationToken cancellationToken)
-    {
-        var exists = await _dbContext.Activities.AsNoTracking()
-            .AnyAsync(x => x.Id == activityId, cancellationToken);
+    public async Task<PagedCommentResponse> GetAsync(
+    Guid userId,
+    Guid activityId,
+    CommentListRequest request,
+    CancellationToken cancellationToken)
+{
+    var exists = await _dbContext.Activities
+        .AsNoTracking()
+        .AnyAsync(x => x.Id == activityId, cancellationToken);
 
-        if (!exists)
-            throw new KeyNotFoundException("Activity not found.");
+    if (!exists)
+        throw new KeyNotFoundException("Activity not found.");
 
-        return await _dbContext.Comments.AsNoTracking()
-            .Where(x => x.ActivityId == activityId)
-            .OrderBy(x => x.CreatedAt)
-            .Select(x => new CommentResponse(
-                x.Id, x.ActivityId, x.UserId, x.User.Username,
-                x.User.DisplayName, x.User.ProfileImageUrl,
-                x.Content, x.CreatedAt))
-            .ToListAsync(cancellationToken);
-    }
+    var page = Math.Max(1, request.Page);
+    var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
+    var query = _dbContext.Comments
+        .AsNoTracking()
+        .Where(x => x.ActivityId == activityId);
+
+    var totalCount = await query.CountAsync(cancellationToken);
+
+    var totalPages = totalCount == 0
+        ? 0
+        : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+    var comments = await query
+        .OrderBy(x => x.CreatedAt)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(x => new CommentResponse(
+            x.Id,
+            x.ActivityId,
+            x.UserId,
+            x.User.Username,
+            x.User.DisplayName,
+            x.User.ProfileImageUrl,
+            x.Content,
+            x.CreatedAt))
+        .ToListAsync(cancellationToken);
+
+    return new PagedCommentResponse(
+        comments,
+        page,
+        pageSize,
+        totalCount,
+        totalPages);
+}
 
     public async Task<CommentResponse> CreateAsync(
         Guid userId,

@@ -6,10 +6,14 @@ namespace PaceUp.Infrastructure.Persistence;
 
 public class PaceUpDbContext : DbContext, IApplicationDbContext
 {
-    public PaceUpDbContext(DbContextOptions<PaceUpDbContext> options) : base(options) { }
+    public PaceUpDbContext(DbContextOptions<PaceUpDbContext> options)
+        : base(options)
+    {
+    }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<ActivityPoint> ActivityPoints => Set<ActivityPoint>();
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<UserIdentity> UserIdentities => Set<UserIdentity>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
@@ -25,6 +29,7 @@ public class PaceUpDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PaceUpDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(PaceUpDbContext).Assembly);
     }
 }

@@ -18,7 +18,10 @@ using PaceUp.Application.Abstractions.Challenges;
 using PaceUp.Application.Features.Challenges;
 using PaceUp.Application.Abstractions.Kudos;
 using PaceUp.Application.Features.Kudos;
-
+using PaceUp.Application.Abstractions.Comments;
+using PaceUp.Application.Features.Comments;
+using PaceUp.Application.Abstractions.Routes;
+using PaceUp.Application.Features.Routes;
 namespace PaceUp.Application.DependencyInjection;
 
 public static class DependencyInjection
@@ -46,6 +49,10 @@ public static class DependencyInjection
         services.AddScoped<IChallengeService, ChallengeService>();
 
         services.AddScoped<IKudosService, KudosService>();
+
+        services.AddScoped<ICommentService, CommentService>();
+
+        services.AddScoped<IRouteService, RouteService>();
 
         return services;
     }

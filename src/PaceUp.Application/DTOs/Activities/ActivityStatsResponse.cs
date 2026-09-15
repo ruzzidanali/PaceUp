@@ -5,4 +5,8 @@ public record ActivityStatsResponse(
     double TotalDistance,
     int TotalDurationSeconds,
     int TotalCalories,
-    IReadOnlyDictionary<string, int> ActivitiesByType);
+    IReadOnlyDictionary<string, int> ActivitiesByType,
+    double? AverageSpeedKmh = null,
+    double? AveragePaceSecondsPerKm = null,
+    double? BestSpeedKmh = null,
+    double? BestPaceSecondsPerKm = null);

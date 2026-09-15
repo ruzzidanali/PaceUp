@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using PaceUp.Application.DTOs.Activities;
+using PaceUp.Application.DTOs.Routes;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -1653,6 +1654,131 @@ public class ActivitiesApiTests
     }
 
     [Fact]
+    public async Task GetActivityStats_ShouldReturnPaceAndSpeedStatistics()
+    {
+        await AuthenticateAsync(_client);
+
+        var createActivityResponse =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                new CreateActivityRequest(
+                    "Run",
+                    10.0,
+                    3600,
+                    600,
+                    new DateTime(
+                        2026,
+                        8,
+                        20,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createActivityResponse.StatusCode);
+
+        var activity =
+            await createActivityResponse.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(activity);
+
+        var routeRequest =
+            new CreateActivityRouteRequest(
+                new[]
+                {
+                new CreateActivityPointRequest(
+                    1.0,
+                    1.0,
+                    null,
+                    5.0,
+                    5.0,
+                    null,
+                    new DateTime(
+                        2026,
+                        8,
+                        20,
+                        10,
+                        0,
+                        0,
+                        DateTimeKind.Utc)),
+
+                new CreateActivityPointRequest(
+                    1.001,
+                    1.001,
+                    null,
+                    5.0,
+                    10.0,
+                    null,
+                    new DateTime(
+                        2026,
+                        8,
+                        20,
+                        10,
+                        30,
+                        0,
+                        DateTimeKind.Utc))
+                });
+
+        var routeResponse =
+            await _client.PostAsJsonAsync(
+                $"/api/activities/{activity.Id}/route",
+                routeRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            routeResponse.StatusCode);
+
+        var statsResponse =
+            await _client.GetAsync(
+                "/api/activities/stats");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            statsResponse.StatusCode);
+
+        var stats =
+            await statsResponse.Content
+                .ReadFromJsonAsync<ActivityStatsResponse>();
+
+        Assert.NotNull(stats);
+
+        Assert.Equal(
+            1,
+            stats.TotalActivities);
+
+        Assert.Equal(
+            10.0,
+            stats.TotalDistance);
+
+        Assert.Equal(
+            3600,
+            stats.TotalDurationSeconds);
+
+        Assert.Equal(
+            10.0,
+            stats.AverageSpeedKmh!.Value,
+            3);
+
+        Assert.Equal(
+            360,
+            stats.AveragePaceSecondsPerKm!.Value,
+            3);
+
+        Assert.Equal(
+            36.0,
+            stats.BestSpeedKmh!.Value,
+            3);
+
+        Assert.Equal(
+            100.0,
+            stats.BestPaceSecondsPerKm!.Value,
+            3);
+    }
+
+    [Fact]
     public async Task GetActivityTrends_ByDay_ShouldReturnDailyTotals()
     {
         await AuthenticateAsync(_client);
@@ -1715,6 +1841,16 @@ public class ActivitiesApiTests
         Assert.Equal(3000, firstDay.TotalDurationSeconds);
         Assert.Equal(400, firstDay.TotalCalories);
 
+        Assert.Equal(
+    9.6,
+    firstDay.AverageSpeedKmh!.Value,
+    3);
+
+        Assert.Equal(
+            375,
+            firstDay.AveragePaceSecondsPerKm!.Value,
+            3);
+
         var secondDay =
             trends.Items.Single(
                 x => x.Date == new DateTime(2026, 8, 21));
@@ -1723,6 +1859,16 @@ public class ActivitiesApiTests
         Assert.Equal(7.0, secondDay.TotalDistance);
         Assert.Equal(2400, secondDay.TotalDurationSeconds);
         Assert.Equal(400, secondDay.TotalCalories);
+
+        Assert.Equal(
+    10.5,
+    secondDay.AverageSpeedKmh!.Value,
+    3);
+
+        Assert.Equal(
+            342.857142,
+            secondDay.AveragePaceSecondsPerKm!.Value,
+            3);
     }
 
     [Fact]

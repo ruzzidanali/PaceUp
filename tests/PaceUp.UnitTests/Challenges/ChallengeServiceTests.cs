@@ -1356,11 +1356,17 @@ public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<ActivityPoint> ActivityPoints =>
+            Set<ActivityPoint>();
+
         public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
             Set<PaceUp.Domain.Entities.Kudos>();
 
         public DbSet<Goal> Goals =>
             Set<Goal>();
+
+        public DbSet<Comment> Comments =>
+            Set<Comment>();
 
         public DbSet<Challenge> Challenges =>
             Set<Challenge>();

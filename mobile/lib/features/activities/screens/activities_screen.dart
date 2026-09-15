@@ -4,6 +4,8 @@ import '../models/activity_models.dart';
 import '../services/activity_service.dart';
 import 'add_activity_screen.dart';
 import 'activity_details_screen.dart';
+import '../../tracking/screens/tracking_screen.dart';
+import 'fitness_statistics_screen.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -52,6 +54,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     if (created == true && mounted) {
       await _loadActivities();
     }
+  }
+
+  Future<void> _openTracking() async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const TrackingScreen()));
   }
 
   Future<void> _loadActivities() async {
@@ -130,14 +137,40 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const FitnessStatisticsScreen(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.insights_rounded),
+          label: const Text('Fitness Statistics'),
+        ),
+        const SizedBox(height: 16),
         _buildStatsCard(),
         const SizedBox(height: 20),
         _buildFilter(),
         const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: _openAddActivity,
-          icon: const Icon(Icons.add),
-          label: const Text('Add Activity'),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _openTracking,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Track Activity'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _openAddActivity,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Activity'),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         Text(
@@ -256,7 +289,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           child: Text(
             '${_formatDate(activity.startedAt)}\n'
             '${activity.distance.toStringAsFixed(2)} km • '
-            '${_formatDuration(activity.durationSeconds)}'
+            '${_formatDuration(activity.durationSeconds)}\n'
+            '${_formatPace(activity)} • '
+            '${_formatSpeed(activity)}'
             '${activity.calories != null ? ' • ${activity.calories} kcal' : ''}',
           ),
         ),
@@ -382,6 +417,30 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         '${localDate.month.toString().padLeft(2, '0')}/'
         '${localDate.year}';
   }
+}
+
+String _formatPace(ActivityResponse activity) {
+  if (activity.distance <= 0 || activity.durationSeconds <= 0) {
+    return '--';
+  }
+
+  final secondsPerKm = activity.durationSeconds / activity.distance;
+  final totalSeconds = secondsPerKm.round();
+
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+
+  return '$minutes:${seconds.toString().padLeft(2, '0')} /km';
+}
+
+String _formatSpeed(ActivityResponse activity) {
+  if (activity.distance <= 0 || activity.durationSeconds <= 0) {
+    return '--';
+  }
+
+  final speedKmh = activity.distance * 3600 / activity.durationSeconds;
+
+  return '${speedKmh.toStringAsFixed(1)} km/h';
 }
 
 class _StatItem extends StatelessWidget {

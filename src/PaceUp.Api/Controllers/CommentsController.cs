@@ -16,14 +16,18 @@ public class CommentsController : ControllerBase
     public CommentsController(ICommentService commentService) => _commentService = commentService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CommentResponse>>> Get(
-        Guid activityId,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedCommentResponse>> Get(
+    Guid activityId,
+    [FromQuery] CommentListRequest request,
+    CancellationToken cancellationToken)
     {
         try
         {
             return Ok(await _commentService.GetAsync(
-                User.GetUserId(), activityId, cancellationToken));
+                User.GetUserId(),
+                activityId,
+                request,
+                cancellationToken));
         }
         catch (KeyNotFoundException)
         {
