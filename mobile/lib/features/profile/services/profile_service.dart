@@ -80,13 +80,9 @@ class ProfileService {
   }
 
   Future<UserResponse> updateProfileImage(XFile image) async {
-    final accessToken = await _tokenStorage.getAccessToken();
+    final accessToken = await _getAccessToken();
 
-    if (accessToken == null || accessToken.isEmpty) {
-      throw Exception('No access token available.');
-    }
-
-    final response = await _apiClient.postMultipart(
+    final response = await _apiClient.putMultipart(
       '/users/me/profile-image',
       fileField: 'file',
       filePath: image.path,

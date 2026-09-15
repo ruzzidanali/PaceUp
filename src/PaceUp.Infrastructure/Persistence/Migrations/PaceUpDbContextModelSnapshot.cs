@@ -59,6 +59,43 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                     b.ToTable("activities", (string)null);
                 });
 
+            modelBuilder.Entity("PaceUp.Domain.Entities.ActivityPoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Accuracy")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("ActivityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Altitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("HeartRate")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("Speed")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId", "RecordedAt");
+
+                    b.ToTable("activity_points", (string)null);
+                });
+
             modelBuilder.Entity("PaceUp.Domain.Entities.Challenge", b =>
                 {
                     b.Property<Guid>("Id")
@@ -133,6 +170,35 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("IX_challenge_participants_ChallengeId_UserId");
 
                     b.ToTable("challenge_participants", (string)null);
+                });
+
+            modelBuilder.Entity("PaceUp.Domain.Entities.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActivityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ActivityId", "CreatedAt");
+
+                    b.ToTable("comments", (string)null);
                 });
 
             modelBuilder.Entity("PaceUp.Domain.Entities.EmailVerificationToken", b =>
@@ -235,6 +301,33 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                     b.ToTable("goals", (string)null);
                 });
 
+            modelBuilder.Entity("PaceUp.Domain.Entities.Kudos", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActivityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ActivityId", "CreatedAt");
+
+                    b.HasIndex("ActivityId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("kudos", (string)null);
+                });
+
             modelBuilder.Entity("PaceUp.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -251,6 +344,9 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TargetId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Type")
@@ -431,6 +527,17 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PaceUp.Domain.Entities.ActivityPoint", b =>
+                {
+                    b.HasOne("PaceUp.Domain.Entities.Activity", "Activity")
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
+                });
+
             modelBuilder.Entity("PaceUp.Domain.Entities.Challenge", b =>
                 {
                     b.HasOne("PaceUp.Domain.Entities.User", "CreatedByUser")
@@ -457,6 +564,25 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Challenge");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PaceUp.Domain.Entities.Comment", b =>
+                {
+                    b.HasOne("PaceUp.Domain.Entities.Activity", "Activity")
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PaceUp.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
 
                     b.Navigation("User");
                 });
@@ -498,6 +624,25 @@ namespace PaceUp.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PaceUp.Domain.Entities.Kudos", b =>
+                {
+                    b.HasOne("PaceUp.Domain.Entities.Activity", "Activity")
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PaceUp.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
 
                     b.Navigation("User");
                 });

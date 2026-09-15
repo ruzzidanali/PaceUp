@@ -1043,6 +1043,12 @@ public class AuthenticationServiceTests
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<ActivityPoint> ActivityPoints =>
+            Set<ActivityPoint>();
+
+        public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
+            Set<PaceUp.Domain.Entities.Kudos>();
+
         public DbSet<Goal> Goals =>
             Set<Goal>();
 
@@ -1050,6 +1056,9 @@ public class AuthenticationServiceTests
 
         public DbSet<UserIdentity> UserIdentities =>
             Set<UserIdentity>();
+
+        public DbSet<Comment> Comments =>
+            Set<Comment>();
 
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();

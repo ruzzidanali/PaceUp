@@ -70,12 +70,21 @@ class ActivityStatsResponse {
   final int totalCalories;
   final Map<String, int> activitiesByType;
 
+  final double? averageSpeedKmh;
+  final double? averagePaceSecondsPerKm;
+  final double? bestSpeedKmh;
+  final double? bestPaceSecondsPerKm;
+
   const ActivityStatsResponse({
     required this.totalActivities,
     required this.totalDistance,
     required this.totalDurationSeconds,
     required this.totalCalories,
     required this.activitiesByType,
+    this.averageSpeedKmh,
+    this.averagePaceSecondsPerKm,
+    this.bestSpeedKmh,
+    this.bestPaceSecondsPerKm,
   });
 
   factory ActivityStatsResponse.fromJson(Map<String, dynamic> json) {
@@ -90,6 +99,79 @@ class ActivityStatsResponse {
       activitiesByType: activitiesByTypeJson.map(
         (key, value) => MapEntry(key, value as int),
       ),
+      averageSpeedKmh: (json['averageSpeedKmh'] as num?)?.toDouble(),
+      averagePaceSecondsPerKm: (json['averagePaceSecondsPerKm'] as num?)
+          ?.toDouble(),
+      bestSpeedKmh: (json['bestSpeedKmh'] as num?)?.toDouble(),
+      bestPaceSecondsPerKm: (json['bestPaceSecondsPerKm'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class ActivityTrendItemResponse {
+  final DateTime date;
+  final int totalActivities;
+  final double totalDistance;
+  final int totalDurationSeconds;
+  final double totalCalories;
+
+  final double? averageSpeedKmh;
+  final double? averagePaceSecondsPerKm;
+
+  const ActivityTrendItemResponse({
+    required this.date,
+    required this.totalActivities,
+    required this.totalDistance,
+    required this.totalDurationSeconds,
+    required this.totalCalories,
+    this.averageSpeedKmh,
+    this.averagePaceSecondsPerKm,
+  });
+
+  factory ActivityTrendItemResponse.fromJson(Map<String, dynamic> json) {
+    return ActivityTrendItemResponse(
+      date: DateTime.parse(json['date'] as String),
+      totalActivities: json['totalActivities'] as int,
+      totalDistance: (json['totalDistance'] as num).toDouble(),
+      totalDurationSeconds: json['totalDurationSeconds'] as int,
+      totalCalories: (json['totalCalories'] as num).toDouble(),
+      averageSpeedKmh: (json['averageSpeedKmh'] as num?)?.toDouble(),
+      averagePaceSecondsPerKm: (json['averagePaceSecondsPerKm'] as num?)
+          ?.toDouble(),
+    );
+  }
+}
+
+class ActivityTrendResponse {
+  final DateTime? from;
+  final DateTime? to;
+  final String? type;
+  final String groupBy;
+  final List<ActivityTrendItemResponse> items;
+
+  const ActivityTrendResponse({
+    required this.from,
+    required this.to,
+    required this.type,
+    required this.groupBy,
+    required this.items,
+  });
+
+  factory ActivityTrendResponse.fromJson(Map<String, dynamic> json) {
+    return ActivityTrendResponse(
+      from: json['from'] == null
+          ? null
+          : DateTime.parse(json['from'] as String),
+      to: json['to'] == null ? null : DateTime.parse(json['to'] as String),
+      type: json['type'] as String?,
+      groupBy: json['groupBy'] as String,
+      items: (json['items'] as List<dynamic>)
+          .map(
+            (item) => ActivityTrendItemResponse.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
     );
   }
 }

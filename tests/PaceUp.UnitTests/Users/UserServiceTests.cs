@@ -180,6 +180,15 @@ public class UserServiceTests
         public DbSet<Activity> Activities =>
             Set<Activity>();
 
+        public DbSet<ActivityPoint> ActivityPoints =>
+            Set<ActivityPoint>();
+
+        public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
+            Set<PaceUp.Domain.Entities.Kudos>();
+
+        public DbSet<Comment> Comments =>
+            Set<Comment>();
+
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();
 
@@ -717,6 +726,7 @@ public class UserServiceTests
             Guid recipientUserId,
             Guid actorUserId,
             string type,
+            Guid? targetId,
             CancellationToken cancellationToken)
         {
             Calls.Add(

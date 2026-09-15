@@ -8,4 +8,5 @@ public record NotificationResponse(
     string ActorUsername,
     string ActorDisplayName,
     string? ActorProfileImageUrl,
+    Guid? TargetId,
     DateTime CreatedAt);

@@ -74,6 +74,196 @@ public class ActivityServiceTests
     }
 
     [Fact]
+    public async Task GetStatsAsync_ShouldCalculatePaceAndSpeedStatistics()
+    {
+        await using var db = CreateDatabase();
+
+        var user = new User(
+            "performance_user",
+            "performance@example.com",
+            "Performance User");
+
+        db.Users.Add(user);
+
+        var run = new Activity(
+            user.Id,
+            "Run",
+            10.0,
+            3600,
+            600,
+            DateTime.UtcNow);
+
+        var walk = new Activity(
+            user.Id,
+            "Walk",
+            5.0,
+            3600,
+            300,
+            DateTime.UtcNow.AddDays(-1));
+
+        db.Activities.AddRange(
+            run,
+            walk);
+
+        await db.SaveChangesAsync();
+
+        db.ActivityPoints.AddRange(
+            new ActivityPoint(
+                run.Id,
+                1.0,
+                1.0,
+                null,
+                5,
+                5,
+                null,
+                DateTime.UtcNow.AddMinutes(-30)),
+
+            new ActivityPoint(
+                run.Id,
+                1.001,
+                1.001,
+                null,
+                5,
+                10,
+                null,
+                DateTime.UtcNow.AddMinutes(-20)),
+
+            new ActivityPoint(
+                walk.Id,
+                2.0,
+                2.0,
+                null,
+                5,
+                2,
+                null,
+                DateTime.UtcNow.AddDays(-1).AddMinutes(10)));
+
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var result =
+            await service.GetStatsAsync(
+                user.Id,
+                new ActivityListRequest(),
+                CancellationToken.None);
+
+        Assert.Equal(
+            15.0,
+            result.TotalDistance);
+
+        Assert.True(result.AverageSpeedKmh.HasValue);
+        Assert.Equal(
+            7.5,
+            result.AverageSpeedKmh.Value,
+            3);
+
+        Assert.True(result.AveragePaceSecondsPerKm.HasValue);
+        Assert.Equal(
+            480,
+            result.AveragePaceSecondsPerKm.Value,
+            3);
+
+        Assert.True(result.BestSpeedKmh.HasValue);
+        Assert.Equal(
+            36,
+            result.BestSpeedKmh.Value,
+            3);
+
+        Assert.True(result.BestPaceSecondsPerKm.HasValue);
+        Assert.Equal(
+            100,
+            result.BestPaceSecondsPerKm.Value,
+            3);
+    }
+
+
+    [Fact]
+    public async Task GetStatsAsync_ShouldIgnoreAnotherUsersActivityPoints()
+    {
+        await using var db = CreateDatabase();
+
+        var user = new User(
+            "performance_owner",
+            "performance_owner@example.com",
+            "Performance Owner");
+
+        var otherUser = new User(
+            "performance_other",
+            "performance_other@example.com",
+            "Performance Other");
+
+        db.Users.AddRange(
+            user,
+            otherUser);
+
+        var userActivity = new Activity(
+            user.Id,
+            "Run",
+            5.0,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var otherActivity = new Activity(
+            otherUser.Id,
+            "Run",
+            5.0,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        db.Activities.AddRange(
+            userActivity,
+            otherActivity);
+
+        await db.SaveChangesAsync();
+
+        db.ActivityPoints.AddRange(
+            new ActivityPoint(
+                userActivity.Id,
+                1.0,
+                1.0,
+                null,
+                5,
+                3,
+                null,
+                DateTime.UtcNow),
+
+            new ActivityPoint(
+                otherActivity.Id,
+                2.0,
+                2.0,
+                null,
+                5,
+                100,
+                null,
+                DateTime.UtcNow));
+
+        await db.SaveChangesAsync();
+
+        var service = new ActivityService(db);
+
+        var result =
+            await service.GetStatsAsync(
+                user.Id,
+                new ActivityListRequest(),
+                CancellationToken.None);
+
+        Assert.True(result.BestSpeedKmh.HasValue);
+        Assert.Equal(
+            10.8,
+            result.BestSpeedKmh.Value,
+            1);
+
+        Assert.True(result.BestPaceSecondsPerKm.HasValue);
+        Assert.Equal(
+            333.333333,
+            result.BestPaceSecondsPerKm.Value,
+            1);
+    }
+
+    [Fact]
     public async Task GetStatsAsync_ShouldOnlyIncludeUsersActivities()
     {
         await using var db = CreateDatabase();
@@ -678,6 +868,15 @@ public class ActivityServiceTests
 
         public DbSet<Activity> Activities =>
             Set<Activity>();
+
+        public DbSet<ActivityPoint> ActivityPoints =>
+            Set<ActivityPoint>();
+
+        public DbSet<Comment> Comments =>
+            Set<Comment>();
+
+        public DbSet<PaceUp.Domain.Entities.Kudos> Kudos =>
+            Set<PaceUp.Domain.Entities.Kudos>();
 
         public DbSet<EmailVerificationToken> EmailVerificationTokens =>
             Set<EmailVerificationToken>();

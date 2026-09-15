@@ -6,25 +6,18 @@ namespace PaceUp.Application.Abstractions.Persistence;
 public interface IApplicationDbContext
 {
     DbSet<User> Users { get; }
-
     DbSet<UserIdentity> UserIdentities { get; }
-
     DbSet<Activity> Activities { get; }
-
+    DbSet<ActivityPoint> ActivityPoints { get; }
     DbSet<Goal> Goals { get; }
-
     DbSet<EmailVerificationToken> EmailVerificationTokens { get; }
-
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
-
     DbSet<RefreshToken> RefreshTokens { get; }
-
     DbSet<Notification> Notifications { get; }
-
     DbSet<Follow> Follows { get; }
-
+    DbSet<PaceUp.Domain.Entities.Kudos> Kudos { get; }
+    DbSet<Comment> Comments { get; }
     DbSet<Challenge> Challenges { get; }
-
     DbSet<ChallengeParticipant> ChallengeParticipants { get; }
 
     Task<int> SaveChangesAsync(

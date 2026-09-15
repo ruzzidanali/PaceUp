@@ -253,7 +253,7 @@ class _SummaryGrid extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.55,
+      mainAxisExtent: 120,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
@@ -299,18 +299,26 @@ class _SummaryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 24),
             const SizedBox(height: 8),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),
@@ -338,11 +346,15 @@ class _GoalCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${goal.type[0].toUpperCase()}${goal.type.substring(1)} Goal',
+                    '${goal.type[0].toUpperCase()}'
+                    '${goal.type.substring(1)} Goal',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '${goal.progressPercentage.toStringAsFixed(0)}%',
                   style: Theme.of(context).textTheme.titleMedium
@@ -358,19 +370,29 @@ class _GoalCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
                     '${formatGoalValue(goal.type, goal.current)} / '
                     '${formatGoalValue(goal.type, goal.target)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                !goal.isCompleted
-                    ? Text(
-                        '${formatGoalValue(goal.type, goal.remaining)} left',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      )
-                    : const Icon(Icons.check_circle_outline, size: 20),
+                const SizedBox(width: 8),
+                if (!goal.isCompleted)
+                  Flexible(
+                    child: Text(
+                      '${formatGoalValue(goal.type, goal.remaining)} left',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  )
+                else
+                  const Icon(Icons.check_circle_outline, size: 20),
               ],
             ),
           ],
@@ -397,30 +419,63 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Icon(icon)),
-        title: Text(
-          formatActivityType(activity.type),
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          '${formatDate(activity.startedAt)} • '
-          '${formatDuration(activity.durationSeconds)}',
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              '${activity.distance.toStringAsFixed(1)} km',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            if (activity.calories != null)
-              Text(
-                '${activity.calories} kcal',
-                style: Theme.of(context).textTheme.bodySmall,
+            CircleAvatar(child: Icon(icon)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formatActivityType(activity.type),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${formatDate(activity.startedAt)} • '
+                    '${formatDuration(activity.durationSeconds)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              flex: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${activity.distance.toStringAsFixed(1)} km',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (activity.calories != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '${activity.calories} kcal',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -440,6 +495,7 @@ class _EmptyCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 40),
             const SizedBox(height: 12),
@@ -463,6 +519,7 @@ class _ErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.cloud_off_rounded, size: 48),
@@ -470,6 +527,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               'Unable to load dashboard',
               style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),

@@ -90,6 +90,44 @@ class ActivityService {
     );
   }
 
+  Future<ActivityTrendResponse> getTrends({
+    String? type,
+    DateTime? from,
+    DateTime? to,
+    String groupBy = 'day',
+  }) async {
+    final accessToken = await _tokenStorage.getAccessToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception('No access token available.');
+    }
+
+    final queryParameters = <String, String>{
+      'groupBy': groupBy,
+      if (type != null && type.isNotEmpty) 'type': type,
+      if (from != null) 'from': from.toUtc().toIso8601String(),
+      if (to != null) 'to': to.toUtc().toIso8601String(),
+    };
+
+    final query = Uri(queryParameters: queryParameters).query;
+
+    final response = await _apiClient.get(
+      '/activities/trends?$query',
+      token: accessToken,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load activity trends: '
+        '${response.statusCode} ${response.body}',
+      );
+    }
+
+    return ActivityTrendResponse.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
   Future<ActivityResponse> createActivity(CreateActivityRequest request) async {
     final accessToken = await _tokenStorage.getAccessToken();
 

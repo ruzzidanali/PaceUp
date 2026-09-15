@@ -21,5 +21,6 @@ public interface INotificationService
         Guid recipientUserId,
         Guid actorUserId,
         string type,
+        Guid? targetId,
         CancellationToken cancellationToken);
 }

@@ -105,7 +105,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    [HttpPost("me/profile-image")]
+    [HttpPut("me/profile-image")]
     [ProducesResponseType(
     typeof(UserResponse),
     StatusCodes.Status200OK)]

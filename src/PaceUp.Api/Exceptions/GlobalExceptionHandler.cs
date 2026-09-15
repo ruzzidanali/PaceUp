@@ -33,6 +33,13 @@ public class GlobalExceptionHandler : IExceptionHandler
                 "Unauthorized request: {Message}",
                 exception.Message);
         }
+        else if (exception is KeyNotFoundException)
+        {
+            _logger.LogWarning(
+                exception,
+                "Resource not found: {Message}",
+                exception.Message);
+        }
         else if (exception is ArgumentException)
         {
             _logger.LogWarning(
@@ -55,6 +62,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             UnauthorizedAccessException =>
                 StatusCodes.Status401Unauthorized,
 
+            KeyNotFoundException =>
+                StatusCodes.Status404NotFound,
+
             ArgumentException =>
                 StatusCodes.Status400BadRequest,
 
@@ -69,6 +79,9 @@ public class GlobalExceptionHandler : IExceptionHandler
 
             UnauthorizedAccessException =>
                 "Unauthorized",
+
+            KeyNotFoundException =>
+                "Not Found",
 
             ArgumentException =>
                 "Invalid request",
