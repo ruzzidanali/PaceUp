@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../auth/services/auth_state.dart';
 import '../../dashboard/models/dashboard_models.dart';
 import '../../dashboard/services/dashboard_service.dart';
+import '../../streaks/models/streak_models.dart';
+import '../../streaks/services/streak_service.dart';
+import '../../streaks/widgets/streak_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final AuthController authController;
@@ -15,16 +18,24 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final DashboardService _dashboardService;
+  late final StreakService _streakService;
 
   DashboardResponse? _dashboard;
+  StreakResponse? _streak;
+
   bool _isLoading = true;
+  bool _isStreakLoading = true;
+
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _dashboardService = DashboardService();
+    _streakService = StreakService();
+
     _loadDashboard();
+    _loadStreak();
   }
 
   @override
@@ -58,6 +69,34 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _loadStreak() async {
+    setState(() {
+      _isStreakLoading = true;
+    });
+
+    try {
+      final streak = await _streakService.getStreak();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _streak = streak;
+        _isStreakLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isStreakLoading = false;
+        _streak = null;
       });
     }
   }
@@ -141,7 +180,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final dashboard = _dashboard!;
 
     return RefreshIndicator(
-      onRefresh: _loadDashboard,
+      onRefresh: () async {
+        await Future.wait([_loadDashboard(), _loadStreak()]);
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -157,6 +198,16 @@ class _HomeScreenState extends State<HomeScreen> {
             summary: dashboard.activitySummary,
             formatDuration: _formatDuration,
           ),
+          const SizedBox(height: 16),
+          if (_isStreakLoading)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            )
+          else if (_streak != null)
+            StreakCard(streak: _streak!),
           const SizedBox(height: 28),
           _SectionTitle(title: 'Active Goals'),
           const SizedBox(height: 12),

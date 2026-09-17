@@ -207,6 +207,12 @@ public class UserServiceTests
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
 
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -724,7 +730,7 @@ public class UserServiceTests
 
         public Task CreateAsync(
             Guid recipientUserId,
-            Guid actorUserId,
+            Guid? actorUserId,
             string type,
             Guid? targetId,
             CancellationToken cancellationToken)
@@ -741,6 +747,6 @@ public class UserServiceTests
 
     private record NotificationCall(
         Guid RecipientUserId,
-        Guid ActorUserId,
+        Guid? ActorUserId,
         string Type);
 }

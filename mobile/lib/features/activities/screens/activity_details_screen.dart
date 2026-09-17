@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-
-import '../../auth/services/auth_service.dart';
-import '../../kudos/models/kudos_models.dart';
-import '../../kudos/services/kudos_service.dart';
-import '../models/activity_models.dart';
-import '../services/activity_service.dart';
-import 'add_activity_screen.dart';
-
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../auth/services/auth_service.dart';
+import '../../comments/widgets/comments_sheet.dart';
+import '../../kudos/models/kudos_models.dart';
+import '../../kudos/services/kudos_service.dart';
 import '../../tracking/models/route_models.dart';
 import '../../tracking/services/route_service.dart';
+import '../models/activity_models.dart';
+import '../services/activity_service.dart';
+import 'add_activity_screen.dart';
 
 class ActivityDetailsScreen extends StatefulWidget {
   final ActivityResponse activity;
@@ -31,6 +30,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
 
   KudosResponse? _kudos;
   RouteResponse? _route;
+  String? _currentUserId;
 
   bool _isDeleting = false;
   bool _isLoadingKudos = true;
@@ -43,7 +43,6 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
   @override
   void initState() {
     super.initState();
-
     _activity = widget.activity;
 
     _activityService = ActivityService();
@@ -59,7 +58,6 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
     _activityService.dispose();
     _kudosService.dispose();
     _routeService.dispose();
-
     super.dispose();
   }
 
@@ -75,6 +73,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
         }
 
         setState(() {
+          _currentUserId = currentUser.id;
           _isOwnActivity = currentUser.id == _activity.userId;
         });
       } finally {
@@ -519,7 +518,6 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                 : '${activity.calories} kcal',
             label: 'Calories',
           ),
-
           const SizedBox(height: 24),
           Text(
             'Route',
@@ -528,15 +526,20 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
           ),
           const SizedBox(height: 12),
           _buildRouteMap(),
-
-          // Social interaction for activities owned by other users.
-
-          // Social interaction for activities owned by other users.
           if (!_isOwnActivity) ...[
             const SizedBox(height: 24),
             _buildKudosCard(),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => showCommentsSheet(
+                context,
+                activity.id,
+                currentUserId: _currentUserId,
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+              label: const Text('View Comments'),
+            ),
           ],
-
           if (_isOwnActivity) ...[
             const SizedBox(height: 24),
             FilledButton.icon(

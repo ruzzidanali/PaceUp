@@ -1075,6 +1075,12 @@ public class AuthenticationServiceTests
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
 
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
+
         public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

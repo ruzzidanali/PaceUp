@@ -3,17 +3,21 @@ using PaceUp.Application.Abstractions.Activities;
 using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.DTOs.Activities;
 using PaceUp.Domain.Entities;
+using PaceUp.Application.Abstractions.Achievements;
 
 namespace PaceUp.Application.Features.Activities;
 
 public class ActivityService : IActivityService
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IAchievementService _achievementService;
 
     public ActivityService(
-        IApplicationDbContext dbContext)
+        IApplicationDbContext dbContext,
+        IAchievementService achievementService)
     {
         _dbContext = dbContext;
+        _achievementService = achievementService;
     }
 
     public async Task<ActivityResponse> CreateAsync(
@@ -33,6 +37,11 @@ public class ActivityService : IActivityService
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
+
+        await _achievementService.EvaluateAsync(
+            userId,
+            cancellationToken
+        );
 
         return Map(activity);
     }

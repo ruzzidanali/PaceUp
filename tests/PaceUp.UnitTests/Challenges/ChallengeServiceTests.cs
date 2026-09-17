@@ -1374,6 +1374,12 @@ public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
 
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
+
         public DbSet<Follow> Follows =>
             Set<Follow>();
 

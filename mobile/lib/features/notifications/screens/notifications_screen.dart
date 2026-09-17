@@ -6,6 +6,7 @@ import '../widgets/notification_tile.dart';
 import '../../activities/screens/activity_details_screen.dart';
 import '../../activities/services/activity_service.dart';
 import '../../social/screens/user_profile_screen.dart';
+import '../../achievements/screens/achievements_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -149,6 +150,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 UserProfileScreen(userId: notification.actorUserId.toString()),
           ),
         );
+        break;
+
+      case 'AchievementUnlocked':
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const AchievementsScreen()));
         break;
     }
   }

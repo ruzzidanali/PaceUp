@@ -2,9 +2,9 @@ class NotificationResponse {
   final String id;
   final String type;
   final bool isRead;
-  final String actorUserId;
-  final String actorUsername;
-  final String actorDisplayName;
+  final String? actorUserId;
+  final String? actorUsername;
+  final String? actorDisplayName;
   final String? actorProfileImageUrl;
   final DateTime createdAt;
   final String? targetId;
@@ -26,9 +26,9 @@ class NotificationResponse {
       id: json['id'] as String,
       type: json['type'] as String,
       isRead: json['isRead'] as bool,
-      actorUserId: json['actorUserId'] as String,
-      actorUsername: json['actorUsername'] as String,
-      actorDisplayName: json['actorDisplayName'] as String,
+      actorUserId: json['actorUserId'] as String?,
+      actorUsername: json['actorUsername'] as String?,
+      actorDisplayName: json['actorDisplayName'] as String?,
       actorProfileImageUrl: json['actorProfileImageUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       targetId: json['targetId'] as String?,

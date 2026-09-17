@@ -18,7 +18,7 @@ public class NotificationService : INotificationService
 
     public async Task CreateAsync(
     Guid recipientUserId,
-    Guid actorUserId,
+    Guid? actorUserId,
     string type,
     Guid? targetId,
     CancellationToken cancellationToken)
@@ -54,9 +54,15 @@ public class NotificationService : INotificationService
                             x.Type,
                             x.IsRead,
                             x.ActorUserId,
-                            x.ActorUser.Username,
-                            x.ActorUser.DisplayName,
-                            x.ActorUser.ProfileImageUrl,
+                            x.ActorUser != null
+                                ? x.ActorUser.Username
+                                : null,
+                            x.ActorUser != null
+                                ? x.ActorUser.DisplayName
+                                : null,
+                            x.ActorUser != null
+                                ? x.ActorUser.ProfileImageUrl
+                                : null,
                             x.TargetId,
                             x.CreatedAt))
                 .ToListAsync(cancellationToken);

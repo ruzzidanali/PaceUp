@@ -22,6 +22,10 @@ using PaceUp.Application.Abstractions.Comments;
 using PaceUp.Application.Features.Comments;
 using PaceUp.Application.Abstractions.Routes;
 using PaceUp.Application.Features.Routes;
+using PaceUp.Application.Abstractions.Achievements;
+using PaceUp.Application.Features.Achievements;
+using PaceUp.Application.Abstractions.Streaks;
+using PaceUp.Application.Features.Streaks;
 namespace PaceUp.Application.DependencyInjection;
 
 public static class DependencyInjection
@@ -53,6 +57,10 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
 
         services.AddScoped<IRouteService, RouteService>();
+
+        services.AddScoped<IAchievementService, AchievementService>();
+
+        services.AddScoped<IStreakService, StreakService>();
 
         return services;
     }

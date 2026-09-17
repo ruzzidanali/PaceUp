@@ -6,6 +6,9 @@ using PaceUp.Application.DTOs.Routes;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
+using PaceUp.Application.DTOs.Achievements;
+using PaceUp.Application.DTOs.Notifications;
+using PaceUp.Application.DTOs.Streaks;
 
 namespace PaceUp.IntegrationTests.Activities;
 
@@ -85,6 +88,92 @@ public class ActivitiesApiTests
         Assert.Equal(
             request.StartedAt,
             activity.StartedAt);
+    }
+
+    [Fact]
+    public async Task CreateActivity_ShouldUnlockAchievementAndCreateNotification()
+    {
+        await AuthenticateAsync(_client);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var response =
+            await _client.PostAsJsonAsync(
+                "/api/activities",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            response.StatusCode);
+
+        var activity =
+            await response.Content
+                .ReadFromJsonAsync<ActivityResponse>();
+
+        Assert.NotNull(activity);
+
+        // Verify the achievement was unlocked.
+        var achievementsResponse =
+            await _client.GetAsync(
+                "/api/achievements");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            achievementsResponse.StatusCode);
+
+        var achievements =
+            await achievementsResponse.Content
+                .ReadFromJsonAsync<
+                    List<AchievementResponse>>();
+
+        Assert.NotNull(achievements);
+
+        var firstActivityAchievement =
+            achievements.Single(
+                x => x.Code == "FIRST_ACTIVITY");
+
+        Assert.NotNull(
+            firstActivityAchievement.UnlockedAt);
+
+        // Verify the achievement notification was created.
+        var notificationsResponse =
+            await _client.GetAsync(
+                "/api/notifications");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            notificationsResponse.StatusCode);
+
+        var notifications =
+            await notificationsResponse.Content
+                .ReadFromJsonAsync<
+                    List<NotificationResponse>>();
+
+        Assert.NotNull(notifications);
+
+        var achievementNotification =
+            notifications.Single(
+                x =>
+                    x.Type == "AchievementUnlocked" &&
+                    x.TargetId ==
+                        firstActivityAchievement.Id);
+
+        Assert.Null(
+            achievementNotification.ActorUserId);
+
+        Assert.Null(
+            achievementNotification.ActorUsername);
+
+        Assert.Null(
+            achievementNotification.ActorDisplayName);
+
+        Assert.Null(
+            achievementNotification.ActorProfileImageUrl);
     }
 
     [Fact]
@@ -2138,5 +2227,62 @@ public class ActivitiesApiTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetStreaks_ShouldReturnCurrentAndLongestStreak()
+    {
+        await AuthenticateAsync(_client);
+
+        var today = DateTime.UtcNow.Date;
+
+        var activityDates = new[]
+        {
+        today,
+        today.AddDays(-1),
+        today.AddDays(-2),
+        today.AddDays(-4)
+    };
+
+        foreach (var startedAt in activityDates)
+        {
+            var request = new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                startedAt.AddHours(10));
+
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/activities",
+                    request);
+
+            Assert.Equal(
+                HttpStatusCode.Created,
+                response.StatusCode);
+        }
+
+        var streakResponse =
+            await _client.GetAsync(
+                "/api/streaks");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            streakResponse.StatusCode);
+
+        var streak =
+            await streakResponse.Content
+                .ReadFromJsonAsync<StreakResponse>();
+
+        Assert.NotNull(streak);
+
+        Assert.Equal(
+            3,
+            streak.CurrentStreak);
+
+        Assert.Equal(
+            3,
+            streak.LongestStreak);
     }
 }

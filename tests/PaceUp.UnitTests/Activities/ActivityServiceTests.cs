@@ -1,14 +1,15 @@
 using Microsoft.EntityFrameworkCore;
+using PaceUp.Application.Abstractions.Achievements;
+using PaceUp.Application.Abstractions.Persistence;
+using PaceUp.Application.DTOs.Achievements;
 using PaceUp.Application.DTOs.Activities;
 using PaceUp.Application.Features.Activities;
-using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Domain.Entities;
 
 namespace PaceUp.UnitTests.Activities;
 
 public class ActivityServiceTests
 {
-
     [Fact]
     public async Task GetStatsAsync_ShouldReturnCorrectStatistics()
     {
@@ -48,7 +49,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetStatsAsync(
@@ -140,7 +141,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetStatsAsync(
@@ -176,7 +177,6 @@ public class ActivityServiceTests
             result.BestPaceSecondsPerKm.Value,
             3);
     }
-
 
     [Fact]
     public async Task GetStatsAsync_ShouldIgnoreAnotherUsersActivityPoints()
@@ -242,7 +242,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetStatsAsync(
@@ -301,7 +301,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetStatsAsync(
@@ -350,7 +350,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var request = new UpdateActivityRequest(
             "Ride",
@@ -412,7 +412,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var request = new UpdateActivityRequest(
             "Ride",
@@ -451,7 +451,7 @@ public class ActivityServiceTests
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var request = new UpdateActivityRequest(
             "Run",
@@ -494,7 +494,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.DeleteAsync(
@@ -543,7 +543,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.DeleteAsync(
@@ -574,7 +574,7 @@ public class ActivityServiceTests
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.DeleteAsync(
@@ -590,7 +590,7 @@ public class ActivityServiceTests
     {
         await using var db = CreateDatabase();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var user = new User(
             "activity_user",
@@ -678,7 +678,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetByIdAsync(
@@ -728,7 +728,7 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var result =
             await service.GetByIdAsync(
@@ -789,19 +789,19 @@ public class ActivityServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new ActivityService(db);
+        var service = CreateService(db);
 
         var results =
-    await service.GetUserActivitiesAsync(
-        user.Id,
-        new ActivityListRequest(
-            Page: 1,
-            PageSize: 20),
-        CancellationToken.None);
+            await service.GetUserActivitiesAsync(
+                user.Id,
+                new ActivityListRequest(
+                    Page: 1,
+                    PageSize: 20),
+                CancellationToken.None);
 
         Assert.Equal(
-    2,
-    results.TotalCount);
+            2,
+            results.TotalCount);
 
         Assert.Equal(
             1,
@@ -820,18 +820,173 @@ public class ActivityServiceTests
             results.Items.Count);
 
         Assert.All(
-    results.Items,
-    x => Assert.Equal(
-        user.Id,
-        x.UserId));
+            results.Items,
+            x => Assert.Equal(
+                user.Id,
+                x.UserId));
 
         Assert.Equal(
-    secondActivity.Id,
-    results.Items[0].Id);
+            secondActivity.Id,
+            results.Items[0].Id);
 
         Assert.Equal(
             firstActivity.Id,
             results.Items[1].Id);
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var request = new CreateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateActivity_WithValidType_ShouldSucceed()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var result =
+            await service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.Equal(
+            "Run",
+            result.Type);
+    }
+
+    [Fact]
+    public async Task UpdateActivity_WithInvalidType_ShouldThrow()
+    {
+        using var db = CreateDatabase();
+
+        var user = new User(
+            "activity_user",
+            "activity@example.com",
+            "Activity User");
+
+        db.Users.Add(user);
+
+        var activity = new Activity(
+            user.Id,
+            "Run",
+            5,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        db.Activities.Add(activity);
+
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var request = new UpdateActivityRequest(
+            "FlyingToTheMoon",
+            10,
+            1000,
+            500,
+            DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UpdateAsync(
+                user.Id,
+                activity.Id,
+                request,
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldEvaluateAchievementsAfterCreatingActivity()
+    {
+        await using var db = CreateDatabase();
+
+        var achievementService = new FakeAchievementService();
+
+        var service = new ActivityService(
+            db,
+            achievementService);
+
+        var user = new User(
+            "achievement_user",
+            "achievement@example.com",
+            "Achievement User");
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var request = new CreateActivityRequest(
+            "Run",
+            5.0,
+            1800,
+            300,
+            DateTime.UtcNow);
+
+        var result =
+            await service.CreateAsync(
+                user.Id,
+                request,
+                CancellationToken.None);
+
+        Assert.NotEqual(
+            Guid.Empty,
+            result.Id);
+
+        Assert.True(
+            achievementService.WasEvaluated);
+
+        Assert.Equal(
+            user.Id,
+            achievementService.EvaluatedUserId);
+    }
+
+    private static ActivityService CreateService(
+        TestDbContext db)
+    {
+        return new ActivityService(
+            db,
+            new FakeAchievementService());
     }
 
     private static TestDbContext CreateDatabase()
@@ -845,9 +1000,33 @@ public class ActivityServiceTests
         return new TestDbContext(options);
     }
 
+    private sealed class FakeAchievementService : IAchievementService
+    {
+        public bool WasEvaluated { get; private set; }
+
+        public Guid? EvaluatedUserId { get; private set; }
+
+        public Task<IReadOnlyList<AchievementResponse>> GetAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<AchievementResponse>>([]);
+        }
+
+        public Task<IReadOnlyList<AchievementResponse>> EvaluateAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            WasEvaluated = true;
+            EvaluatedUserId = userId;
+
+            return Task.FromResult<IReadOnlyList<AchievementResponse>>([]);
+        }
+    }
+
     private sealed class TestDbContext :
-    DbContext,
-    IApplicationDbContext
+        DbContext,
+        IApplicationDbContext
     {
         public TestDbContext(
             DbContextOptions<TestDbContext> options)
@@ -895,6 +1074,12 @@ public class ActivityServiceTests
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
 
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -910,108 +1095,5 @@ public class ActivityServiceTests
             modelBuilder.Entity<EmailVerificationToken>()
                 .HasKey(x => x.Id);
         }
-    }
-
-    [Fact]
-    public async Task CreateActivity_WithInvalidType_ShouldThrow()
-    {
-        using var db = CreateDatabase();
-
-        var user = new User(
-            "activity_user",
-            "activity@example.com",
-            "Activity User");
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        var service = new ActivityService(db);
-
-        var request = new CreateActivityRequest(
-            "FlyingToTheMoon",
-            10,
-            1000,
-            500,
-            DateTime.UtcNow);
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => service.CreateAsync(
-                user.Id,
-                request,
-                CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task CreateActivity_WithValidType_ShouldSucceed()
-    {
-        using var db = CreateDatabase();
-
-        var user = new User(
-            "activity_user",
-            "activity@example.com",
-            "Activity User");
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        var service = new ActivityService(db);
-
-        var request = new CreateActivityRequest(
-            "Run",
-            5,
-            1800,
-            300,
-            DateTime.UtcNow);
-
-        var result =
-            await service.CreateAsync(
-                user.Id,
-                request,
-                CancellationToken.None);
-
-        Assert.Equal(
-            "Run",
-            result.Type);
-    }
-
-    [Fact]
-    public async Task UpdateActivity_WithInvalidType_ShouldThrow()
-    {
-        using var db = CreateDatabase();
-
-        var user = new User(
-            "activity_user",
-            "activity@example.com",
-            "Activity User");
-
-        db.Users.Add(user);
-
-        var activity = new Activity(
-            user.Id,
-            "Run",
-            5,
-            1800,
-            300,
-            DateTime.UtcNow);
-
-        db.Activities.Add(activity);
-
-        await db.SaveChangesAsync();
-
-        var service = new ActivityService(db);
-
-        var request = new UpdateActivityRequest(
-            "FlyingToTheMoon",
-            10,
-            1000,
-            500,
-            DateTime.UtcNow);
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => service.UpdateAsync(
-                user.Id,
-                activity.Id,
-                request,
-                CancellationToken.None));
     }
 }
