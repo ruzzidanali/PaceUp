@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.Features.Notifications;
 using PaceUp.Domain.Entities;
+using PaceUp.Domain.Constants;
 
 namespace PaceUp.UnitTests.Notifications;
 
@@ -330,6 +331,65 @@ public class NotificationServiceTests
                 .IsRead);
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldReturnAchievementNotificationWithoutActor()
+    {
+        await using var db = CreateDatabase();
+
+        var recipient =
+            new User(
+                "recipient",
+                "recipient@example.com",
+                "Recipient");
+
+        db.Users.Add(recipient);
+
+        var achievementId = Guid.NewGuid();
+
+        var notification =
+            new Notification(
+                recipient.Id,
+                null,
+                NotificationTypes.AchievementUnlocked,
+                achievementId);
+
+        db.Notifications.Add(notification);
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new NotificationService(db);
+
+        var result =
+            await service.GetAsync(
+                recipient.Id,
+                CancellationToken.None);
+
+        var item = Assert.Single(result);
+
+        Assert.Equal(
+            notification.Id,
+            item.Id);
+
+        Assert.Equal(
+            NotificationTypes.AchievementUnlocked,
+            item.Type);
+
+        Assert.False(item.IsRead);
+
+        Assert.Null(item.ActorUserId);
+
+        Assert.Null(item.ActorUsername);
+
+        Assert.Null(item.ActorDisplayName);
+
+        Assert.Null(item.ActorProfileImageUrl);
+
+        Assert.Equal(
+            achievementId,
+            item.TargetId);
+    }
+
     private static TestDbContext CreateDatabase()
     {
         var options =
@@ -392,6 +452,12 @@ public class NotificationServiceTests
 
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
+
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
 
         protected override void OnModelCreating(
     ModelBuilder modelBuilder)

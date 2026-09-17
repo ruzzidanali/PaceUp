@@ -6,6 +6,7 @@ public static class NotificationTypes
     public const string ChallengeJoined = "ChallengeJoined";
     public const string ActivityKudos = "ActivityKudos";
     public const string ActivityComment = "ActivityComment";
+    public const string AchievementUnlocked = "AchievementUnlocked";
 
     public static bool IsValid(string? type)
     {
@@ -13,6 +14,7 @@ public static class NotificationTypes
             NewFollower or
             ChallengeJoined or
             ActivityKudos or
-            ActivityComment;
+            ActivityComment or
+            AchievementUnlocked;
     }
 }

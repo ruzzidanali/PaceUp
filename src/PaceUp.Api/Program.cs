@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
+using Microsoft.EntityFrameworkCore;
+using PaceUp.Infrastructure.Persistence.Seed;
+using PaceUp.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +75,15 @@ builder.Services.AddInfrastructure(
     builder.Configuration);
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider
+        .GetRequiredService<PaceUpDbContext>();
+
+    await AchievementSeedData.SeedAsync(dbContext);
+}
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

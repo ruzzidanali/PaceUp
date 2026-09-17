@@ -4,9 +4,9 @@ public record NotificationResponse(
     Guid Id,
     string Type,
     bool IsRead,
-    Guid ActorUserId,
-    string ActorUsername,
-    string ActorDisplayName,
+    Guid? ActorUserId,
+    string? ActorUsername,
+    string? ActorDisplayName,
     string? ActorProfileImageUrl,
     Guid? TargetId,
     DateTime CreatedAt);

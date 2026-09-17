@@ -32,7 +32,8 @@ public class NotificationConfiguration
         builder.HasOne(x => x.ActorUser)
             .WithMany()
             .HasForeignKey(x => x.ActorUserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);
 
         builder.HasIndex(
             x => new

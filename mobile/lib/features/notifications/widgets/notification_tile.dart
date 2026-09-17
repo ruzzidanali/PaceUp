@@ -12,6 +12,9 @@ class NotificationTile extends StatelessWidget {
     this.onTap,
   });
 
+  bool get _isAchievementNotification =>
+      notification.type == 'AchievementUnlocked';
+
   String _notificationMessage() {
     switch (notification.type) {
       case 'ActivityKudos':
@@ -20,6 +23,8 @@ class NotificationTile extends StatelessWidget {
         return 'commented on your activity';
       case 'NewFollower':
         return 'started following you';
+      case 'AchievementUnlocked':
+        return 'You unlocked an achievement!';
       default:
         return 'sent you a notification';
     }
@@ -54,6 +59,42 @@ class NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (_isAchievementNotification) {
+      return ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          radius: 24,
+          child: Icon(
+            Icons.emoji_events,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        title: const Text(
+          'Achievement unlocked!',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(_timeAgo()),
+        ),
+        trailing: notification.isRead
+            ? null
+            : Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+        tileColor: notification.isRead
+            ? null
+            : theme.colorScheme.primary.withValues(alpha: 0.06),
+      );
+    }
+
     return ListTile(
       onTap: onTap,
       leading: CircleAvatar(
@@ -70,7 +111,7 @@ class NotificationTile extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
           children: [
             TextSpan(
-              text: notification.actorDisplayName,
+              text: notification.actorDisplayName ?? 'Someone',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),

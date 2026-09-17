@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../achievements/models/achievement_models.dart';
+import '../../achievements/services/achievement_service.dart';
 import '../models/activity_models.dart';
 import '../services/activity_service.dart';
 
@@ -16,6 +18,7 @@ class AddActivityScreen extends StatefulWidget {
 
 class _AddActivityScreenState extends State<AddActivityScreen> {
   late final ActivityService _activityService;
+  late final AchievementService _achievementService;
 
   final _formKey = GlobalKey<FormState>();
   final _distanceController = TextEditingController();
@@ -41,6 +44,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   void initState() {
     super.initState();
     _activityService = ActivityService();
+    _achievementService = AchievementService();
 
     final activity = widget.activity;
 
@@ -98,7 +102,11 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     });
 
     try {
+      List<AchievementResponse> achievementsBefore = [];
+
       if (widget.activity == null) {
+        achievementsBefore = await _achievementService.getAchievements();
+
         final request = CreateActivityRequest(
           type: _selectedType,
           distance: double.parse(_distanceController.text),
@@ -108,6 +116,21 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         );
 
         await _activityService.createActivity(request);
+
+        final achievementsAfter = await _achievementService.getAchievements();
+
+        final newlyUnlocked = _achievementService.findNewlyUnlocked(
+          achievementsBefore,
+          achievementsAfter,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        if (newlyUnlocked.isNotEmpty) {
+          await _showAchievementUnlockedDialog(newlyUnlocked);
+        }
 
         if (!mounted) {
           return;
@@ -146,6 +169,100 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
           _isSaving = false;
         });
       }
+    }
+  }
+
+  Future<void> _showAchievementUnlockedDialog(
+    List<AchievementResponse> achievements,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events_rounded, size: 52),
+                const SizedBox(height: 16),
+                const Text(
+                  'Achievement Unlocked!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                ...achievements.map(
+                  (achievement) => Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(width: 2),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _getAchievementIcon(achievement.icon),
+                              size: 42,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          achievement.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          achievement.description,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Awesome!'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _getAchievementIcon(String icon) {
+    switch (icon) {
+      case 'directions_run':
+        return Icons.directions_run_rounded;
+      case 'military_tech':
+        return Icons.military_tech_rounded;
+      case 'workspace_premium':
+        return Icons.workspace_premium_rounded;
+      case 'straighten':
+        return Icons.straighten_rounded;
+      case 'timer':
+        return Icons.timer_rounded;
+      default:
+        return Icons.emoji_events_rounded;
     }
   }
 

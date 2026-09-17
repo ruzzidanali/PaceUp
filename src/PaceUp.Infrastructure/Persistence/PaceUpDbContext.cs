@@ -25,6 +25,8 @@ public class PaceUpDbContext : DbContext, IApplicationDbContext
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Challenge> Challenges => Set<Challenge>();
     public DbSet<ChallengeParticipant> ChallengeParticipants => Set<ChallengeParticipant>();
+    public DbSet<Achievement> Achievements => Set<Achievement>();
+    public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

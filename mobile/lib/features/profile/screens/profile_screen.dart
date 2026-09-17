@@ -8,6 +8,7 @@ import '../../social/screens/following_screen.dart';
 import '../../social/screens/user_search_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/services/auth_state.dart';
+import '../../achievements/screens/achievements_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ProfileService? profileService;
@@ -453,6 +454,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => FollowingScreen(userId: user.id),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.emoji_events_outlined),
+                  title: const Text('Achievements'),
+                  subtitle: const Text('View your PaceUp achievements'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AchievementsScreen(),
                       ),
                     );
                   },

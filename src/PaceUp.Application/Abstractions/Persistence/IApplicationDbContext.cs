@@ -19,6 +19,8 @@ public interface IApplicationDbContext
     DbSet<Comment> Comments { get; }
     DbSet<Challenge> Challenges { get; }
     DbSet<ChallengeParticipant> ChallengeParticipants { get; }
+    DbSet<Achievement> Achievements { get; }
+    DbSet<UserAchievement> UserAchievements { get; }
 
     Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default);

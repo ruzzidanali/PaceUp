@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../achievements/models/achievement_models.dart';
+import '../../achievements/services/achievement_service.dart';
 import '../../activities/models/activity_models.dart';
 import '../../activities/services/activity_service.dart';
 import '../controllers/tracking_controller.dart';
@@ -18,6 +20,7 @@ class TrackingScreen extends StatefulWidget {
 class _TrackingScreenState extends State<TrackingScreen> {
   late final TrackingController _controller;
   late final ActivityService _activityService;
+  late final AchievementService _achievementService;
   late final RouteService _routeService;
 
   Timer? _timer;
@@ -43,6 +46,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
     _controller = TrackingController();
     _activityService = ActivityService();
+    _achievementService = AchievementService();
     _routeService = RouteService();
 
     _controller.addListener(_onTrackingChanged);
@@ -91,6 +95,100 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
+  Future<void> _showAchievementUnlockedDialog(
+    List<AchievementResponse> achievements,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events_rounded, size: 52),
+                const SizedBox(height: 16),
+                const Text(
+                  'Achievement Unlocked!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                ...achievements.map(
+                  (achievement) => Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(width: 2),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _getAchievementIcon(achievement.icon),
+                              size: 42,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          achievement.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          achievement.description,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Awesome!'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _getAchievementIcon(String icon) {
+    switch (icon) {
+      case 'directions_run':
+        return Icons.directions_run_rounded;
+      case 'military_tech':
+        return Icons.military_tech_rounded;
+      case 'workspace_premium':
+        return Icons.workspace_premium_rounded;
+      case 'straighten':
+        return Icons.straighten_rounded;
+      case 'timer':
+        return Icons.timer_rounded;
+      default:
+        return Icons.emoji_events_rounded;
+    }
+  }
+
   Future<void> _stopTracking() async {
     if (_isSaving) {
       return;
@@ -124,6 +222,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
     setState(() {});
 
     try {
+      final achievementsBefore = await _achievementService.getAchievements();
+
       final activity = await _activityService.createActivity(
         CreateActivityRequest(
           type: 'Run',
@@ -151,6 +251,17 @@ class _TrackingScreenState extends State<TrackingScreen> {
       );
 
       await _routeService.createRoute(activity.id, routeRequest);
+
+      final achievementsAfter = await _achievementService.getAchievements();
+
+      final newlyUnlocked = _achievementService.findNewlyUnlocked(
+        achievementsBefore,
+        achievementsAfter,
+      );
+
+      if (newlyUnlocked.isNotEmpty) {
+        await _showAchievementUnlockedDialog(newlyUnlocked);
+      }
 
       if (!mounted) {
         return;

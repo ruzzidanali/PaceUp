@@ -19,7 +19,7 @@ public interface INotificationService
 
     Task CreateAsync(
         Guid recipientUserId,
-        Guid actorUserId,
+        Guid? actorUserId,
         string type,
         Guid? targetId,
         CancellationToken cancellationToken);

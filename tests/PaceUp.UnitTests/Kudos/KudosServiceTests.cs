@@ -624,6 +624,12 @@ public class KudosServiceTests
         public DbSet<ChallengeParticipant> ChallengeParticipants =>
             Set<ChallengeParticipant>();
 
+        public DbSet<Achievement> Achievements =>
+            Set<Achievement>();
+
+        public DbSet<UserAchievement> UserAchievements =>
+            Set<UserAchievement>();
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {

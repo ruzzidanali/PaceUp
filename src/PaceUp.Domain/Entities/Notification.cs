@@ -8,7 +8,7 @@ public class Notification
 
     public Guid RecipientUserId { get; private set; }
 
-    public Guid ActorUserId { get; private set; }
+    public Guid? ActorUserId { get; private set; }
 
     public string Type { get; private set; } = null!;
 
@@ -18,7 +18,7 @@ public class Notification
 
     public User RecipientUser { get; private set; } = null!;
 
-    public User ActorUser { get; private set; } = null!;
+    public User? ActorUser { get; private set; }
 
     public Guid? TargetId { get; private set; }
 
@@ -28,7 +28,7 @@ public class Notification
 
     public Notification(
     Guid recipientUserId,
-    Guid actorUserId,
+    Guid? actorUserId,
     string type,
     Guid? targetId = null)
     {
@@ -39,7 +39,8 @@ public class Notification
                 nameof(type));
         }
 
-        if (recipientUserId == actorUserId)
+        if (actorUserId.HasValue &&
+            recipientUserId == actorUserId.Value)
         {
             throw new ArgumentException(
                 "A user cannot receive a notification from themselves.",
