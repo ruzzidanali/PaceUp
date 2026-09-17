@@ -8,6 +8,7 @@ using PaceUp.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using PaceUp.Application.DTOs.Achievements;
 using PaceUp.Application.DTOs.Notifications;
+using PaceUp.Application.DTOs.Streaks;
 
 namespace PaceUp.IntegrationTests.Activities;
 
@@ -2226,5 +2227,62 @@ public class ActivitiesApiTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetStreaks_ShouldReturnCurrentAndLongestStreak()
+    {
+        await AuthenticateAsync(_client);
+
+        var today = DateTime.UtcNow.Date;
+
+        var activityDates = new[]
+        {
+        today,
+        today.AddDays(-1),
+        today.AddDays(-2),
+        today.AddDays(-4)
+    };
+
+        foreach (var startedAt in activityDates)
+        {
+            var request = new CreateActivityRequest(
+                "Run",
+                5,
+                1800,
+                300,
+                startedAt.AddHours(10));
+
+            var response =
+                await _client.PostAsJsonAsync(
+                    "/api/activities",
+                    request);
+
+            Assert.Equal(
+                HttpStatusCode.Created,
+                response.StatusCode);
+        }
+
+        var streakResponse =
+            await _client.GetAsync(
+                "/api/streaks");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            streakResponse.StatusCode);
+
+        var streak =
+            await streakResponse.Content
+                .ReadFromJsonAsync<StreakResponse>();
+
+        Assert.NotNull(streak);
+
+        Assert.Equal(
+            3,
+            streak.CurrentStreak);
+
+        Assert.Equal(
+            3,
+            streak.LongestStreak);
     }
 }

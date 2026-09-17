@@ -24,6 +24,7 @@ public class AchievementsControllerTests
                 "directions_run",
                 "ACTIVITY_COUNT",
                 1,
+                1,
                 DateTime.UtcNow)
         };
 

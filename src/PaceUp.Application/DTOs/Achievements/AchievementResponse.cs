@@ -8,5 +8,6 @@ public record AchievementResponse(
     string Icon,
     string RequirementType,
     double RequirementValue,
+    double CurrentProgress,
     DateTime? UnlockedAt
 );

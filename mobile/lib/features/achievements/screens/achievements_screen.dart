@@ -127,30 +127,78 @@ class _AchievementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
+    final progress = achievement.requirementValue <= 0
+        ? 0.0
+        : (achievement.currentProgress / achievement.requirementValue).clamp(
+            0.0,
+            1.0,
+          );
 
     return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          radius: 28,
-          child: Icon(_getIcon(achievement.icon)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(radius: 28, child: Icon(_getIcon(achievement.icon))),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    achievement.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(achievement.description),
+                  const SizedBox(height: 8),
+                  Text(_requirementText(achievement)),
+                  const SizedBox(height: 12),
+                  if (isUnlocked)
+                    const Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'Unlocked',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _progressText(achievement),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '${(progress * 100).round()}%',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(isUnlocked ? Icons.check_circle : Icons.lock_outline),
+          ],
         ),
-        title: Text(
-          achievement.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(achievement.description),
-              const SizedBox(height: 6),
-              Text(_requirementText(achievement)),
-            ],
-          ),
-        ),
-        trailing: Icon(isUnlocked ? Icons.check_circle : Icons.lock_outline),
       ),
     );
   }
@@ -189,6 +237,26 @@ class _AchievementCard extends StatelessWidget {
 
       default:
         return 'Requirement: ${achievement.requirementValue}';
+    }
+  }
+
+  String _progressText(AchievementResponse achievement) {
+    switch (achievement.requirementType) {
+      case 'ACTIVITY_COUNT':
+        return '${achievement.currentProgress.toInt()} / '
+            '${achievement.requirementValue.toInt()}';
+
+      case 'TOTAL_DISTANCE_KM':
+        return '${achievement.currentProgress.toStringAsFixed(1)} / '
+            '${achievement.requirementValue.toStringAsFixed(0)} km';
+
+      case 'ACTIVITY_DURATION_MINUTES':
+        return '${achievement.currentProgress.toStringAsFixed(0)} / '
+            '${achievement.requirementValue.toInt()} min';
+
+      default:
+        return '${achievement.currentProgress} / '
+            '${achievement.requirementValue}';
     }
   }
 }

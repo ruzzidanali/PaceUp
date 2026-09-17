@@ -42,9 +42,40 @@ public class AchievementService : IAchievementService
                 x => x.UnlockedAt,
                 cancellationToken);
 
+        var activityCount = await _dbContext.Activities
+            .CountAsync(
+                x => x.UserId == userId,
+                cancellationToken);
+
+        var totalDistance = await _dbContext.Activities
+            .Where(x => x.UserId == userId)
+            .SumAsync(
+                x => x.Distance,
+                cancellationToken);
+
+        var longestActivityDurationSeconds = await _dbContext.Activities
+            .Where(x => x.UserId == userId)
+            .Select(x => (int?)x.DurationSeconds)
+            .MaxAsync(cancellationToken) ?? 0;
+
         return achievements
             .Select(achievement =>
-                new AchievementResponse(
+            {
+                var currentProgress = achievement.RequirementType switch
+                {
+                    "ACTIVITY_COUNT" =>
+                        activityCount,
+
+                    "TOTAL_DISTANCE_KM" =>
+                        totalDistance,
+
+                    "ACTIVITY_DURATION_MINUTES" =>
+                        longestActivityDurationSeconds / 60.0,
+
+                    _ => 0
+                };
+
+                return new AchievementResponse(
                     achievement.Id,
                     achievement.Code,
                     achievement.Name,
@@ -52,11 +83,13 @@ public class AchievementService : IAchievementService
                     achievement.Icon,
                     achievement.RequirementType,
                     achievement.RequirementValue,
+                    currentProgress,
                     unlockedAchievements.TryGetValue(
                         achievement.Id,
                         out var unlockedAt)
                         ? unlockedAt
-                        : null))
+                        : null);
+            })
             .ToList();
     }
 
@@ -154,15 +187,25 @@ public class AchievementService : IAchievementService
         }
 
         return newlyUnlocked
-            .Select(x => new AchievementResponse(
-                x.Achievement.Id,
-                x.Achievement.Code,
-                x.Achievement.Name,
-                x.Achievement.Description,
-                x.Achievement.Icon,
-                x.Achievement.RequirementType,
-                x.Achievement.RequirementValue,
-                x.UserAchievement.UnlockedAt))
-            .ToList();
+    .Select(x => new AchievementResponse(
+        x.Achievement.Id,
+        x.Achievement.Code,
+        x.Achievement.Name,
+        x.Achievement.Description,
+        x.Achievement.Icon,
+        x.Achievement.RequirementType,
+        x.Achievement.RequirementValue,
+        x.Achievement.RequirementType switch
+        {
+            "ACTIVITY_COUNT" => activityCount,
+            "TOTAL_DISTANCE_KM" => totalDistance,
+            "ACTIVITY_DURATION_MINUTES" =>
+                hasSixtyMinuteActivity
+                    ? 60
+                    : 0,
+            _ => 0
+        },
+        x.UserAchievement.UnlockedAt))
+    .ToList();
     }
 }

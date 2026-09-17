@@ -6,6 +6,7 @@ class AchievementResponse {
   final String icon;
   final String requirementType;
   final double requirementValue;
+  final double currentProgress;
   final DateTime? unlockedAt;
 
   const AchievementResponse({
@@ -16,12 +17,11 @@ class AchievementResponse {
     required this.icon,
     required this.requirementType,
     required this.requirementValue,
+    required this.currentProgress,
     required this.unlockedAt,
   });
 
-  factory AchievementResponse.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory AchievementResponse.fromJson(Map<String, dynamic> json) {
     return AchievementResponse(
       id: json['id'] as String,
       code: json['code'] as String,
@@ -29,13 +29,11 @@ class AchievementResponse {
       description: json['description'] as String,
       icon: json['icon'] as String,
       requirementType: json['requirementType'] as String,
-      requirementValue:
-          (json['requirementValue'] as num).toDouble(),
+      requirementValue: (json['requirementValue'] as num).toDouble(),
+      currentProgress: (json['currentProgress'] as num).toDouble(),
       unlockedAt: json['unlockedAt'] == null
           ? null
-          : DateTime.parse(
-              json['unlockedAt'] as String,
-            ),
+          : DateTime.parse(json['unlockedAt'] as String),
     );
   }
 
