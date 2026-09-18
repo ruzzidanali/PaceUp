@@ -26,6 +26,9 @@ using PaceUp.Application.Abstractions.Achievements;
 using PaceUp.Application.Features.Achievements;
 using PaceUp.Application.Abstractions.Streaks;
 using PaceUp.Application.Features.Streaks;
+using PaceUp.Application.Abstractions.Leaderboards;
+using PaceUp.Application.Features.Leaderboards;
+
 namespace PaceUp.Application.DependencyInjection;
 
 public static class DependencyInjection
@@ -61,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IAchievementService, AchievementService>();
 
         services.AddScoped<IStreakService, StreakService>();
+
+        services.AddScoped<ILeaderboardService, LeaderboardService>();
 
         return services;
     }
