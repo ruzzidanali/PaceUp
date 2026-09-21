@@ -28,6 +28,7 @@ using PaceUp.Application.Abstractions.Streaks;
 using PaceUp.Application.Features.Streaks;
 using PaceUp.Application.Abstractions.Leaderboards;
 using PaceUp.Application.Features.Leaderboards;
+
 namespace PaceUp.Application.DependencyInjection;
 
 public static class DependencyInjection
