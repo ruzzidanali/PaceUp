@@ -459,6 +459,11 @@ public class NotificationServiceTests
         public DbSet<UserAchievement> UserAchievements =>
             Set<UserAchievement>();
 
+        public DbSet<UserGamification> UserGamifications => Set<UserGamification>();
+
+        public DbSet<XpTransaction> XpTransactions =>
+            Set<XpTransaction>();
+
         protected override void OnModelCreating(
     ModelBuilder modelBuilder)
         {

@@ -1081,6 +1081,11 @@ public class AuthenticationServiceTests
         public DbSet<UserAchievement> UserAchievements =>
             Set<UserAchievement>();
 
+        public DbSet<UserGamification> UserGamifications => Set<UserGamification>();
+
+        public DbSet<XpTransaction> XpTransactions =>
+            Set<XpTransaction>();
+
         public DbSet<RefreshToken> RefreshTokens { get; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

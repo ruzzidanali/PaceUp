@@ -48,4 +48,8 @@ public interface IChallengeService
         Guid userId,
         Guid challengeId,
         CancellationToken cancellationToken);
+
+    Task EvaluateCompletionsAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
 }

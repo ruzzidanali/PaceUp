@@ -5,6 +5,9 @@ using PaceUp.Application.DTOs.Achievements;
 using PaceUp.Application.DTOs.Activities;
 using PaceUp.Application.Features.Activities;
 using PaceUp.Domain.Entities;
+using PaceUp.Application.Abstractions.Xp;
+using PaceUp.Application.Abstractions.Challenges;
+using PaceUp.Application.DTOs.Challenges;
 
 namespace PaceUp.UnitTests.Activities;
 
@@ -943,10 +946,14 @@ public class ActivityServiceTests
         await using var db = CreateDatabase();
 
         var achievementService = new FakeAchievementService();
+        var xpService = new FakeXpService();
+        var challengeService = new FakeChallengeService();
 
         var service = new ActivityService(
             db,
-            achievementService);
+            achievementService,
+            xpService,
+            challengeService);
 
         var user = new User(
             "achievement_user",
@@ -979,14 +986,34 @@ public class ActivityServiceTests
         Assert.Equal(
             user.Id,
             achievementService.EvaluatedUserId);
+
+        Assert.True(
+            xpService.WasAwarded);
+
+        Assert.Equal(
+            user.Id,
+            xpService.AwardedUserId);
+
+        Assert.Equal(
+            result.Id,
+            xpService.AwardedActivityId);
+
+        Assert.True(
+            challengeService.WasEvaluated);
+
+        Assert.Equal(
+            user.Id,
+            challengeService.EvaluatedUserId);
     }
 
     private static ActivityService CreateService(
-        TestDbContext db)
+    TestDbContext db)
     {
         return new ActivityService(
             db,
-            new FakeAchievementService());
+            new FakeAchievementService(),
+            new FakeXpService(),
+            new FakeChallengeService());
     }
 
     private static TestDbContext CreateDatabase()
@@ -998,6 +1025,125 @@ public class ActivityServiceTests
                 .Options;
 
         return new TestDbContext(options);
+    }
+
+    private sealed class FakeXpService : IXpService
+    {
+        public bool WasAwarded { get; private set; }
+
+        public Guid? AwardedUserId { get; private set; }
+
+        public Guid? AwardedActivityId { get; private set; }
+
+        public Task AwardActivityXpAsync(
+            Guid userId,
+            Guid activityId,
+            CancellationToken cancellationToken)
+        {
+            WasAwarded = true;
+            AwardedUserId = userId;
+            AwardedActivityId = activityId;
+
+            return Task.CompletedTask;
+        }
+
+        public Task AwardChallengeXpAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken
+        )
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeChallengeService : IChallengeService
+    {
+        public bool WasEvaluated { get; private set; }
+
+        public Guid? EvaluatedUserId { get; private set; }
+
+        public Task EvaluateCompletionsAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            WasEvaluated = true;
+            EvaluatedUserId = userId;
+
+            return Task.CompletedTask;
+        }
+
+        public Task<ChallengeResponse> CreateAsync(
+            Guid userId,
+            CreateChallengeRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IReadOnlyList<ChallengeResponse>> GetAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ChallengeResponse?> GetByIdAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ChallengeResponse?> UpdateAsync(
+            Guid userId,
+            Guid challengeId,
+            UpdateChallengeRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DeleteAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> JoinAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> LeaveAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ChallengeProgressResponse?> GetProgressAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ChallengeLeaderboardResponse?> GetLeaderboardAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private sealed class FakeAchievementService : IAchievementService
@@ -1079,6 +1225,11 @@ public class ActivityServiceTests
 
         public DbSet<UserAchievement> UserAchievements =>
             Set<UserAchievement>();
+
+        public DbSet<UserGamification> UserGamifications => Set<UserGamification>();
+
+        public DbSet<XpTransaction> XpTransactions =>
+            Set<XpTransaction>();
 
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)

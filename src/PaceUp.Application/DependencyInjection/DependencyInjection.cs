@@ -28,6 +28,10 @@ using PaceUp.Application.Abstractions.Streaks;
 using PaceUp.Application.Features.Streaks;
 using PaceUp.Application.Abstractions.Leaderboards;
 using PaceUp.Application.Features.Leaderboards;
+using PaceUp.Application.Abstractions.PersonalRecords;
+using PaceUp.Application.Features.PersonalRecords;
+using PaceUp.Application.Abstractions.Xp;
+using PaceUp.Application.Features.Xp;
 
 namespace PaceUp.Application.DependencyInjection;
 
@@ -38,7 +42,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IUserService, UserService>();
 
-        services.AddScoped<IAuthenticationService,AuthenticationService>();
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
 
         services.AddValidatorsFromAssembly(
             typeof(DependencyInjection).Assembly);
@@ -66,6 +70,10 @@ public static class DependencyInjection
         services.AddScoped<IStreakService, StreakService>();
 
         services.AddScoped<ILeaderboardService, LeaderboardService>();
+
+        services.AddScoped<IXpService, XpService>();
+
+        services.AddScoped<IPersonalRecordService, PersonalRecordService>();
 
         return services;
     }
