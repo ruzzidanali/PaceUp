@@ -6,6 +6,7 @@ using PaceUp.Application.Exceptions;
 using PaceUp.Domain.Constants;
 using PaceUp.Domain.Entities;
 using PaceUp.Application.Abstractions.Notifications;
+using PaceUp.Application.Abstractions.Xp;
 
 namespace PaceUp.Application.Features.Challenges;
 
@@ -13,13 +14,16 @@ public class ChallengeService : IChallengeService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly INotificationService _notificationService;
+    private readonly IXpService _xpService;
 
     public ChallengeService(
-        IApplicationDbContext dbContext,
-        INotificationService notificationService)
+    IApplicationDbContext dbContext,
+    INotificationService notificationService,
+    IXpService xpService)
     {
         _dbContext = dbContext;
         _notificationService = notificationService;
+        _xpService = xpService;
     }
 
     public async Task<ChallengeResponse> CreateAsync(
@@ -432,6 +436,88 @@ public class ChallengeService : IChallengeService
         return new ChallengeLeaderboardResponse(
             challenge.Id,
             leaderboard);
+    }
+
+    public async Task EvaluateCompletionsAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        var participatedChallengeIds =
+            await _dbContext.ChallengeParticipants
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .Select(x => x.ChallengeId)
+                .ToListAsync(cancellationToken);
+
+        if (participatedChallengeIds.Count == 0)
+        {
+            return;
+        }
+
+        var challenges =
+            await _dbContext.Challenges
+                .AsNoTracking()
+                .Where(x =>
+                    participatedChallengeIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+
+        if (challenges.Count == 0)
+        {
+            return;
+        }
+
+        var activities =
+            await _dbContext.Activities
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .ToListAsync(cancellationToken);
+
+        foreach (var challenge in challenges)
+        {
+            var challengeActivities =
+                activities
+                    .Where(x =>
+                        x.StartedAt >= challenge.StartDate &&
+                        x.StartedAt <= challenge.EndDate)
+                    .ToList();
+
+            var current =
+                CalculateValue(
+                    challenge.Type,
+                    challengeActivities);
+
+            if (current < challenge.TargetValue)
+            {
+                continue;
+            }
+
+            var alreadyRewarded =
+                await _dbContext.XpTransactions
+                    .AsNoTracking()
+                    .AnyAsync(
+                        x =>
+                            x.UserId == userId &&
+                            x.SourceType == XpSourceTypes.Challenge &&
+                            x.SourceId == challenge.Id,
+                        cancellationToken);
+
+            if (alreadyRewarded)
+            {
+                continue;
+            }
+
+            await _xpService.AwardChallengeXpAsync(
+                userId,
+                challenge.Id,
+                cancellationToken);
+
+            await _notificationService.CreateAsync(
+                userId,
+                null,
+                NotificationTypes.ChallengeCompleted,
+                challenge.Id,
+                cancellationToken);
+        }
     }
 
     private static double CalculateValue(

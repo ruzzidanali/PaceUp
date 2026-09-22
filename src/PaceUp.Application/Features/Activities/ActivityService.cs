@@ -4,6 +4,8 @@ using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.DTOs.Activities;
 using PaceUp.Domain.Entities;
 using PaceUp.Application.Abstractions.Achievements;
+using PaceUp.Application.Abstractions.Xp;
+using PaceUp.Application.Abstractions.Challenges;
 
 namespace PaceUp.Application.Features.Activities;
 
@@ -11,13 +13,19 @@ public class ActivityService : IActivityService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IAchievementService _achievementService;
+    private readonly IXpService _xpService;
+    private readonly IChallengeService _challengeService;
 
     public ActivityService(
         IApplicationDbContext dbContext,
-        IAchievementService achievementService)
+        IAchievementService achievementService,
+        IXpService xpService,
+        IChallengeService challengeService)
     {
         _dbContext = dbContext;
         _achievementService = achievementService;
+        _xpService = xpService;
+        _challengeService = challengeService;
     }
 
     public async Task<ActivityResponse> CreateAsync(
@@ -39,6 +47,17 @@ public class ActivityService : IActivityService
             cancellationToken);
 
         await _achievementService.EvaluateAsync(
+            userId,
+            cancellationToken
+        );
+
+        await _xpService.AwardActivityXpAsync(
+            userId,
+            activity.Id,
+            cancellationToken
+        );
+
+        await _challengeService.EvaluateCompletionsAsync(
             userId,
             cancellationToken
         );

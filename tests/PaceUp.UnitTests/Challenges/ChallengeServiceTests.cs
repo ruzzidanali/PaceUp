@@ -7,6 +7,7 @@ using PaceUp.Application.Features.Challenges;
 using PaceUp.Application.Features.Notifications;
 using PaceUp.Domain.Constants;
 using PaceUp.Domain.Entities;
+using PaceUp.Application.Abstractions.Xp;
 
 namespace PaceUp.UnitTests.Challenges;
 
@@ -1269,51 +1270,354 @@ public class ChallengeServiceTests
     }
 
     [Fact]
-public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
-{
-    using var db = CreateDatabase();
+    public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
+    {
+        using var db = CreateDatabase();
 
-    var creator = new User(
-        "challenge_owner",
-        "owner@example.com",
-        "Challenge Owner");
+        var creator = new User(
+            "challenge_owner",
+            "owner@example.com",
+            "Challenge Owner");
 
-    db.Users.Add(creator);
+        db.Users.Add(creator);
 
-    await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
-    var challenge = new Challenge(
-        creator.Id,
-        "Own Challenge",
-        "My own challenge.",
-        ChallengeTypes.Distance,
-        50,
-        DateTime.UtcNow.AddDays(-1),
-        DateTime.UtcNow.AddDays(7));
-
-    db.Challenges.Add(challenge);
-
-    await db.SaveChangesAsync();
-
-    var service = CreateService(db);
-
-    var result =
-        await service.JoinAsync(
+        var challenge = new Challenge(
             creator.Id,
-            challenge.Id,
+            "Own Challenge",
+            "My own challenge.",
+            ChallengeTypes.Distance,
+            50,
+            DateTime.UtcNow.AddDays(-1),
+            DateTime.UtcNow.AddDays(7));
+
+        db.Challenges.Add(challenge);
+
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result =
+            await service.JoinAsync(
+                creator.Id,
+                challenge.Id,
+                CancellationToken.None);
+
+        Assert.True(result);
+
+        var notifications =
+            await db.Notifications
+                .Where(
+                    x =>
+                        x.RecipientUserId == creator.Id)
+                .ToListAsync();
+
+        Assert.Empty(notifications);
+    }
+
+    [Fact]
+    public async Task EvaluateCompletionsAsync_WhenDistanceTargetReached_ShouldAwardChallengeXp()
+    {
+        using var db = CreateDatabase();
+
+        var user = CreateUser(
+            "runner",
+            "runner@example.com");
+
+        db.Users.Add(user);
+
+        var startDate =
+            DateTime.UtcNow.Date;
+
+        var challenge =
+            new Challenge(
+                user.Id,
+                "10 KM Challenge",
+                null,
+                ChallengeTypes.Distance,
+                10,
+                startDate,
+                startDate.AddDays(6));
+
+        db.Challenges.Add(challenge);
+
+        db.ChallengeParticipants.Add(
+            new ChallengeParticipant(
+                challenge.Id,
+                user.Id));
+
+        db.Activities.Add(
+            new Activity(
+                user.Id,
+                "Run",
+                10,
+                3600,
+                500,
+                startDate.AddDays(1)));
+
+        await db.SaveChangesAsync();
+
+        var xpService = new FakeXpService();
+
+        var notificationService =
+            new NotificationService(db);
+
+        var service =
+            new ChallengeService(
+                db,
+                notificationService,
+                xpService);
+
+        await service.EvaluateCompletionsAsync(
+            user.Id,
             CancellationToken.None);
 
-    Assert.True(result);
+        var awarded =
+    Assert.Single(
+        xpService.AwardedChallenges);
 
-    var notifications =
-        await db.Notifications
-            .Where(
-                x =>
-                    x.RecipientUserId == creator.Id)
-            .ToListAsync();
+        Assert.Equal(
+            user.Id,
+            awarded.UserId);
 
-    Assert.Empty(notifications);
-}
+        Assert.Equal(
+            challenge.Id,
+            awarded.ChallengeId);
+
+        var notification =
+            await db.Notifications
+                .SingleAsync(
+                    x =>
+                        x.RecipientUserId == user.Id &&
+                        x.Type == NotificationTypes.ChallengeCompleted);
+
+        Assert.Null(
+            notification.ActorUserId);
+
+        Assert.Equal(
+            challenge.Id,
+            notification.TargetId);
+
+        Assert.False(
+            notification.IsRead);
+    }
+
+    [Fact]
+    public async Task EvaluateCompletionsAsync_WhenDistanceTargetNotReached_ShouldNotAwardChallengeXp()
+    {
+        using var db = CreateDatabase();
+
+        var user = CreateUser(
+            "runner",
+            "runner@example.com");
+
+        db.Users.Add(user);
+
+        var startDate =
+            DateTime.UtcNow.Date;
+
+        var challenge =
+            new Challenge(
+                user.Id,
+                "10 KM Challenge",
+                null,
+                ChallengeTypes.Distance,
+                10,
+                startDate,
+                startDate.AddDays(6));
+
+        db.Challenges.Add(challenge);
+
+        db.ChallengeParticipants.Add(
+            new ChallengeParticipant(
+                challenge.Id,
+                user.Id));
+
+        db.Activities.Add(
+            new Activity(
+                user.Id,
+                "Run",
+                5,
+                1800,
+                300,
+                startDate.AddDays(1)));
+
+        await db.SaveChangesAsync();
+
+        var xpService = new FakeXpService();
+
+        var notificationService =
+            new NotificationService(db);
+
+        var service =
+            new ChallengeService(
+                db,
+                notificationService,
+                xpService);
+
+        await service.EvaluateCompletionsAsync(
+            user.Id,
+            CancellationToken.None);
+
+        Assert.Empty(
+            xpService.AwardedChallenges);
+    }
+
+    [Fact]
+    public async Task EvaluateCompletionsAsync_WhenActivityCountTargetReached_ShouldAwardChallengeXp()
+    {
+        using var db = CreateDatabase();
+
+        var user = CreateUser(
+            "runner",
+            "runner@example.com");
+
+        db.Users.Add(user);
+
+        var startDate =
+            DateTime.UtcNow.Date;
+
+        var challenge =
+            new Challenge(
+                user.Id,
+                "3 Activities",
+                null,
+                ChallengeTypes.Activities,
+                3,
+                startDate,
+                startDate.AddDays(6));
+
+        db.Challenges.Add(challenge);
+
+        db.ChallengeParticipants.Add(
+            new ChallengeParticipant(
+                challenge.Id,
+                user.Id));
+
+        for (var i = 0; i < 3; i++)
+        {
+            db.Activities.Add(
+                new Activity(
+                    user.Id,
+                    "Run",
+                    5,
+                    1800,
+                    300,
+                    startDate.AddDays(i + 1)));
+        }
+
+        await db.SaveChangesAsync();
+
+        var xpService = new FakeXpService();
+
+        var notificationService =
+            new NotificationService(db);
+
+        var service =
+            new ChallengeService(
+                db,
+                notificationService,
+                xpService);
+
+        await service.EvaluateCompletionsAsync(
+            user.Id,
+            CancellationToken.None);
+
+        var awarded =
+            Assert.Single(
+                xpService.AwardedChallenges);
+
+        Assert.Equal(
+            challenge.Id,
+            awarded.ChallengeId);
+    }
+
+    [Fact]
+    public async Task EvaluateCompletionsAsync_WhenCalledTwice_ShouldAwardAndNotifyOnlyOnce()
+    {
+        using var db = CreateDatabase();
+
+        var user = CreateUser(
+            "runner",
+            "runner@example.com");
+
+        db.Users.Add(user);
+
+        var startDate =
+            DateTime.UtcNow.Date;
+
+        var challenge =
+            new Challenge(
+                user.Id,
+                "10 KM Challenge",
+                null,
+                ChallengeTypes.Distance,
+                10,
+                startDate,
+                startDate.AddDays(6));
+
+        db.Challenges.Add(challenge);
+
+        db.ChallengeParticipants.Add(
+            new ChallengeParticipant(
+                challenge.Id,
+                user.Id));
+
+        db.Activities.Add(
+            new Activity(
+                user.Id,
+                "Run",
+                10,
+                3600,
+                500,
+                startDate.AddDays(1)));
+
+        await db.SaveChangesAsync();
+
+        var xpService = new FakeXpService();
+
+        var notificationService =
+            new NotificationService(db);
+
+        var service =
+            new ChallengeService(
+                db,
+                notificationService,
+                xpService);
+
+        await service.EvaluateCompletionsAsync(
+            user.Id,
+            CancellationToken.None);
+
+        db.XpTransactions.Add(
+            new XpTransaction(
+                user.Id,
+                50,
+                XpSourceTypes.Challenge,
+                challenge.Id));
+
+        await db.SaveChangesAsync();
+
+        await service.EvaluateCompletionsAsync(
+            user.Id,
+            CancellationToken.None);
+
+        Assert.Single(
+            xpService.AwardedChallenges);
+
+        var notifications =
+            await db.Notifications
+                .Where(
+                    x =>
+                        x.RecipientUserId == user.Id &&
+                        x.Type == NotificationTypes.ChallengeCompleted &&
+                        x.TargetId == challenge.Id)
+                .ToListAsync();
+
+        Assert.Single(
+            notifications);
+    }
 
     private static ChallengeService CreateService(
     TestDbContext db)
@@ -1323,8 +1627,10 @@ public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
 
         return new ChallengeService(
             db,
-            notificationService);
+            notificationService,
+            new FakeXpService());
     }
+
 
     private static TestDbContext CreateDatabase()
     {
@@ -1337,6 +1643,29 @@ public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
         return new TestDbContext(options);
     }
 
+    private sealed class FakeXpService : IXpService
+    {
+        public List<(Guid UserId, Guid ChallengeId)> AwardedChallenges { get; } = [];
+
+        public Task AwardActivityXpAsync(
+            Guid userId,
+            Guid activityId,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task AwardChallengeXpAsync(
+            Guid userId,
+            Guid challengeId,
+            CancellationToken cancellationToken)
+        {
+            AwardedChallenges.Add(
+                (userId, challengeId));
+
+            return Task.CompletedTask;
+        }
+    }
     private sealed class TestDbContext :
         DbContext,
         IApplicationDbContext
@@ -1379,6 +1708,11 @@ public async Task JoinAsync_ShouldNotCreateNotificationWhenJoiningOwnChallenge()
 
         public DbSet<UserAchievement> UserAchievements =>
             Set<UserAchievement>();
+
+        public DbSet<UserGamification> UserGamifications => Set<UserGamification>();
+
+        public DbSet<XpTransaction> XpTransactions =>
+            Set<XpTransaction>();
 
         public DbSet<Follow> Follows =>
             Set<Follow>();
