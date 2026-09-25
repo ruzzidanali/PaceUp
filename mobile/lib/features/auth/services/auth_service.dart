@@ -1,9 +1,10 @@
 import 'dart:convert';
-
+import 'package:http/http.dart' as http;
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../models/auth_models.dart';
 import '../models/user_model.dart';
+import '../../../core/network/api_config.dart';
 
 class AuthService {
   final ApiClient _apiClient;
@@ -20,7 +21,11 @@ class AuthService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Login failed: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 401) {
+        throw Exception('Invalid username or email, or password.');
+      }
+
+      throw Exception('Unable to sign in. Please try again.');
     }
 
     final authResponse = AuthResponse.fromJson(
@@ -112,6 +117,60 @@ class AuthService {
 
     return result;
   }
+
+  Future<void> forgotPassword({
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'email': email,
+    }),
+  );
+
+  if (response.statusCode != 204) {
+    throw Exception(
+      'Unable to send password reset email. Please try again.',
+    );
+  }
+}
+
+Future<void> resetPassword({
+  required String token,
+  required String newPassword,
+}) async {
+  final response = await http.post(
+    Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'token': token,
+      'newPassword': newPassword,
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    if (response.statusCode == 401) {
+      throw Exception(
+        'This password reset link is invalid or has expired.',
+      );
+    }
+
+    if (response.statusCode == 409) {
+      throw Exception(
+        'This password reset link has already been used.',
+      );
+    }
+
+    throw Exception(
+      'Unable to reset your password. Please try again.',
+    );
+  }
+}
 
   Future<void> revoke() async {
     final refreshToken = await _tokenStorage.getRefreshToken();

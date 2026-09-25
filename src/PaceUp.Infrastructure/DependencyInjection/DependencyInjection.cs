@@ -5,6 +5,9 @@ using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Infrastructure.Persistence;
 using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Infrastructure.Authentication;
+using PaceUp.Application.Abstractions.Communication;
+using PaceUp.Infrastructure.Communication;
+using Resend;
 
 namespace PaceUp.Infrastructure.DependencyInjection;
 
@@ -38,6 +41,21 @@ public static class DependencyInjection
         services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
 
         services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
+
+        services.AddScoped<IEmailService, EmailService>();
+
+        services.AddOptions();
+
+        services.AddHttpClient<ResendClient>();
+
+        services.Configure<ResendClientOptions>(options =>
+        {
+            options.ApiToken =
+                Environment.GetEnvironmentVariable("RESEND_API_KEY")
+                ?? string.Empty;
+        });
+
+        services.AddTransient<IResend, ResendClient>();
 
         return services;
     }

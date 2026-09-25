@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PaceUp.Infrastructure.Persistence;
+using PaceUp.Application.Abstractions.Communication;
 
 namespace PaceUp.IntegrationTests.Infrastructure;
 
@@ -25,6 +26,20 @@ public class PaceUpWebApplicationFactory
 
         builder.ConfigureServices(services =>
         {
+
+            var emailServiceDescriptor =
+        services.SingleOrDefault(
+            d =>
+                d.ServiceType ==
+                typeof(IEmailService));
+
+            if (emailServiceDescriptor is not null)
+            {
+                services.Remove(emailServiceDescriptor);
+            }
+
+            services.AddSingleton<IEmailService, FakeEmailService>();
+
             var descriptor =
                 services.SingleOrDefault(
                     d =>

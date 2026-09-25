@@ -12,8 +12,8 @@ void main() {
       MaterialApp(home: LoginScreen(authController: authController)),
     );
 
-    expect(find.text('Welcome to PaceUp'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('WELCOME BACK'), findsOneWidget);
+    expect(find.text('SIGN IN'), findsOneWidget);
 
     authController.dispose();
   });
