@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../achievements/models/achievement_models.dart';
 import '../../achievements/services/achievement_service.dart';
 import '../../activities/models/activity_models.dart';
@@ -26,19 +28,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Timer? _timer;
   bool _isSaving = false;
 
-  String _formatPace(double secondsPerKm) {
-    if (secondsPerKm <= 0 || !secondsPerKm.isFinite) {
-      return '--:--';
-    }
+  String _selectedType = 'Run';
 
-    final totalSeconds = secondsPerKm.round();
-
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    return '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')}';
-  }
+  static const _activityTypes = [
+    'Run',
+    'Ride',
+    'Walk',
+    'Hike',
+    'Swim',
+    'Other',
+  ];
 
   @override
   void initState() {
@@ -89,7 +88,21 @@ class _TrackingScreenState extends State<TrackingScreen> {
     if (!started) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Location permission is required to start tracking.'),
+          content: Row(
+            children: [
+              Icon(
+                Icons.location_off_outlined,
+                color: Colors.white,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Location permission is required to start tracking.',
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -103,65 +116,126 @@ class _TrackingScreenState extends State<TrackingScreen> {
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
+          backgroundColor: PaceUpColors.darkPanel,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(
+              color: PaceUpColors.electricGreen.withValues(alpha: 0.35),
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.emoji_events_rounded, size: 52),
-                const SizedBox(height: 16),
-                const Text(
-                  'Achievement Unlocked!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color:
+                        PaceUpColors.electricGreen.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color:
+                          PaceUpColors.electricGreen.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: PaceUpColors.electricGreen,
+                    size: 38,
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
+                Text(
+                  'ACHIEVEMENT UNLOCKED',
+                  textAlign: TextAlign.center,
+                  style: PaceUpTypography.sectionTitle(
+                    PaceUpColors.electricGreen,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You just earned a new badge.',
+                  textAlign: TextAlign.center,
+                  style: PaceUpTypography.body(
+                    PaceUpColors.darkMuted,
+                  ),
+                ),
+                const SizedBox(height: 22),
                 ...achievements.map(
                   (achievement) => Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 88,
-                          height: 88,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(width: 2),
-                          ),
-                          child: Center(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: PaceUpColors.darkPanelSecondary,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: PaceUpColors.darkBorder,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: PaceUpColors.electricGreen
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Icon(
                               _getAchievementIcon(achievement.icon),
-                              size: 42,
+                              color: PaceUpColors.electricGreen,
+                              size: 28,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          achievement.name,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  achievement.name,
+                                  style: PaceUpTypography.bodyMedium(
+                                    PaceUpColors.darkText,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  achievement.description,
+                                  style: PaceUpTypography.body(
+                                    PaceUpColors.darkMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          achievement.description,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: PaceUpColors.electricGreen,
+                      foregroundColor: PaceUpColors.greenInk,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Awesome!'),
+                    child: Text(
+                      'KEEP MOVING',
+                      style: PaceUpTypography.label(
+                        PaceUpColors.greenInk,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -186,6 +260,40 @@ class _TrackingScreenState extends State<TrackingScreen> {
         return Icons.timer_rounded;
       default:
         return Icons.emoji_events_rounded;
+    }
+  }
+
+  IconData _activityIcon(String type) {
+    switch (type) {
+      case 'Run':
+        return Icons.directions_run_rounded;
+      case 'Ride':
+        return Icons.directions_bike_rounded;
+      case 'Walk':
+        return Icons.directions_walk_rounded;
+      case 'Hike':
+        return Icons.terrain_rounded;
+      case 'Swim':
+        return Icons.pool_rounded;
+      default:
+        return Icons.fitness_center_rounded;
+    }
+  }
+
+  String _activityLabel(String type) {
+    switch (type) {
+      case 'Run':
+        return 'RUN';
+      case 'Ride':
+        return 'RIDE';
+      case 'Walk':
+        return 'WALK';
+      case 'Hike':
+        return 'HIKE';
+      case 'Swim':
+        return 'SWIM';
+      default:
+        return 'OTHER';
     }
   }
 
@@ -214,19 +322,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
 
     final distanceKm = _controller.distanceMeters / 1000;
-
     final durationSeconds = _controller.durationSeconds;
-
     final trackingPoints = _controller.points;
 
     setState(() {});
 
     try {
-      final achievementsBefore = await _achievementService.getAchievements();
+      final achievementsBefore =
+          await _achievementService.getAchievements();
 
       final activity = await _activityService.createActivity(
         CreateActivityRequest(
-          type: 'Run',
+          type: _selectedType,
           distance: distanceKm,
           durationSeconds: durationSeconds,
           calories: null,
@@ -250,9 +357,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
             .toList(),
       );
 
-      await _routeService.createRoute(activity.id, routeRequest);
+      await _routeService.createRoute(
+        activity.id,
+        routeRequest,
+      );
 
-      final achievementsAfter = await _achievementService.getAchievements();
+      final achievementsAfter =
+          await _achievementService.getAchievements();
 
       final newlyUnlocked = _achievementService.findNewlyUnlocked(
         achievementsBefore,
@@ -270,9 +381,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Activity saved. '
+            '${_activityLabel(_selectedType)} saved. '
             '${distanceKm.toStringAsFixed(2)} km recorded.',
           ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
 
@@ -288,7 +400,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -318,120 +432,468 @@ class _TrackingScreenState extends State<TrackingScreen> {
         '${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final distanceKm = _controller.distanceMeters / 1000;
+  String _formatPace(double secondsPerKm) {
+    if (secondsPerKm <= 0 || !secondsPerKm.isFinite) {
+      return '--:--';
+    }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Track Activity')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
+    final totalSeconds = secondsPerKm.round();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildActivitySelector() {
+    final trackingStarted = _controller.isTracking;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'ACTIVITY',
+              style: PaceUpTypography.sectionTitle(
+                PaceUpColors.darkMuted,
+              ),
+            ),
+            const Spacer(),
+            if (trackingStarted)
+              Text(
+                'LOCKED',
+                style: PaceUpTypography.label(
+                  PaceUpColors.darkMuted,
+                ).copyWith(
+                  fontSize: 8,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 78,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: trackingStarted
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            itemCount: _activityTypes.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final type = _activityTypes[index];
+              final selected = _selectedType == type;
+
+              return GestureDetector(
+                onTap: trackingStarted || _isSaving
+                    ? null
+                    : () {
+                        setState(() {
+                          _selectedType = type;
+                        });
+                      },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 78,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? PaceUpColors.electricGreen
+                        : PaceUpColors.darkPanel,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected
+                          ? PaceUpColors.electricGreen
+                          : PaceUpColors.darkBorder,
+                    ),
+                  ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.directions_run_rounded, size: 64),
-                      const SizedBox(height: 24),
+                      Icon(
+                        _activityIcon(type),
+                        size: 22,
+                        color: selected
+                            ? PaceUpColors.greenInk
+                            : PaceUpColors.darkMuted,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _activityLabel(type),
+                        style: PaceUpTypography.label(
+                          selected
+                              ? PaceUpColors.greenInk
+                              : PaceUpColors.darkMuted,
+                        ).copyWith(
+                          fontSize: 8,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetric({
+    required String label,
+    required String value,
+    required String unit,
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: PaceUpTypography.label(
+              PaceUpColors.darkMuted,
+            ).copyWith(
+              fontSize: 8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: PaceUpTypography.largeMetric(
+              valueColor ?? PaceUpColors.darkText,
+            ).copyWith(
+              fontSize: 32,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            unit,
+            style: PaceUpTypography.label(
+              PaceUpColors.darkMuted,
+            ).copyWith(
+              fontSize: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGpsStatus() {
+    final tracking = _controller.isTracking;
+    final paused = _controller.isPaused;
+
+    final Color statusColor;
+
+    if (paused) {
+      statusColor = PaceUpColors.electricCyan;
+    } else if (tracking) {
+      statusColor = PaceUpColors.electricGreen;
+    } else {
+      statusColor = PaceUpColors.darkMuted;
+    }
+
+    final String statusText;
+
+    if (paused) {
+      statusText = 'TRACKING PAUSED';
+    } else if (tracking) {
+      statusText = 'GPS TRACKING ACTIVE';
+    } else {
+      statusText = 'READY TO TRACK';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 9,
+      ),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+              boxShadow: tracking && !paused
+                  ? [
+                      BoxShadow(
+                        color: statusColor.withValues(alpha: 0.65),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            statusText,
+            style: PaceUpTypography.label(
+              statusColor,
+            ).copyWith(
+              fontSize: 8,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final distanceKm = _controller.distanceMeters / 1000;
+    final tracking = _controller.isTracking;
+
+    return Scaffold(
+      backgroundColor: PaceUpColors.darkBackground,
+      appBar: AppBar(
+        backgroundColor: PaceUpColors.darkBackground,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 20,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TRACKING',
+              style: PaceUpTypography.sectionTitle(
+                PaceUpColors.darkMuted,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _activityLabel(_selectedType),
+              style: PaceUpTypography.heading(
+                PaceUpColors.darkText,
+              ).copyWith(
+                fontSize: 22,
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildGpsStatus(),
+              const SizedBox(height: 20),
+              _buildActivitySelector(),
+              const SizedBox(height: 28),
+              Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Column(
+                    key: ValueKey(
+                      '${_selectedType}_${tracking}_${_controller.isPaused}',
+                    ),
+                    children: [
+                      Container(
+                        width: 78,
+                        height: 78,
+                        decoration: BoxDecoration(
+                          color: PaceUpColors.electricGreen
+                              .withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: PaceUpColors.electricGreen
+                                .withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Icon(
+                          _activityIcon(_selectedType),
+                          color: PaceUpColors.electricGreen,
+                          size: 38,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
                       Text(
                         distanceKm.toStringAsFixed(2),
-                        style: Theme.of(context).textTheme.displayLarge
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: PaceUpTypography.heroMetric(
+                          PaceUpColors.darkText,
+                        ),
                       ),
-                      Text('km', style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 40),
                       Text(
-                        _formatDuration(_controller.durationSeconds),
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        'KM',
+                        style: PaceUpTypography.sectionTitle(
+                          PaceUpColors.electricGreen,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text('Duration'),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Column(
-                            children: [
-                              Text(
-                                _formatPace(
-                                  _controller.currentPaceSecondsPerKm,
-                                ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall,
-                              ),
-                              const Text('Current Pace'),
-                            ],
-                          ),
-                          const SizedBox(width: 40),
-                          Column(
-                            children: [
-                              Text(
-                                _formatPace(
-                                  _controller.averagePaceSecondsPerKm,
-                                ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall,
-                              ),
-                              const Text('Avg Pace'),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        '${_controller.points.length}',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const Text('GPS points'),
                     ],
                   ),
                 ),
               ),
-              if (!_controller.isTracking)
+              const SizedBox(height: 28),
+              _buildMetric(
+                label: 'DURATION',
+                value: _formatDuration(
+                  _controller.durationSeconds,
+                ),
+                unit: 'TIME',
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetric(
+                      label: 'CURRENT PACE',
+                      value: _formatPace(
+                        _controller.currentPaceSecondsPerKm,
+                      ),
+                      unit: 'MIN / KM',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildMetric(
+                      label: 'AVG PACE',
+                      value: _formatPace(
+                        _controller.averagePaceSecondsPerKm,
+                      ),
+                      unit: 'MIN / KM',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _buildMetric(
+                label: 'GPS DATA',
+                value: '${_controller.points.length}',
+                unit: 'POINTS RECORDED',
+                valueColor: PaceUpColors.electricCyan,
+              ),
+              const SizedBox(height: 28),
+              if (!tracking)
                 SizedBox(
                   width: double.infinity,
+                  height: 56,
                   child: FilledButton.icon(
-                    onPressed: _startTracking,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start'),
+                    onPressed: _isSaving ? null : _startTracking,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: PaceUpColors.electricGreen,
+                      foregroundColor: PaceUpColors.greenInk,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.play_arrow_rounded,
+                      size: 24,
+                    ),
+                    label: Text(
+                      'START TRACKING',
+                      style: PaceUpTypography.label(
+                        PaceUpColors.greenInk,
+                      ).copyWith(
+                        fontSize: 11,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
                   ),
                 )
-              else ...[
+              else
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _togglePause,
-                        icon: Icon(
-                          _controller.isPaused ? Icons.play_arrow : Icons.pause,
+                      child: SizedBox(
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              _isSaving ? null : _togglePause,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: PaceUpColors.darkText,
+                            side: const BorderSide(
+                              color: PaceUpColors.darkBorder,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                          ),
+                          icon: Icon(
+                            _controller.isPaused
+                                ? Icons.play_arrow_rounded
+                                : Icons.pause_rounded,
+                          ),
+                          label: Text(
+                            _controller.isPaused
+                                ? 'RESUME'
+                                : 'PAUSE',
+                            style: PaceUpTypography.label(
+                              PaceUpColors.darkText,
+                            ).copyWith(
+                              fontSize: 10,
+                            ),
+                          ),
                         ),
-                        label: Text(_controller.isPaused ? 'Resume' : 'Pause'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _isSaving ? null : _stopTracking,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      child: SizedBox(
+                        height: 54,
+                        child: FilledButton.icon(
+                          onPressed: _isSaving
+                              ? null
+                              : _stopTracking,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: PaceUpColors.electricGreen,
+                            foregroundColor: PaceUpColors.greenInk,
+                            disabledBackgroundColor:
+                                PaceUpColors.darkPanelSecondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                          ),
+                          icon: _isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        PaceUpColors.darkMuted,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.stop_rounded,
                                 ),
-                              )
-                            : const Icon(Icons.stop),
-                        label: Text(_isSaving ? 'Saving...' : 'Stop'),
+                          label: Text(
+                            _isSaving ? 'SAVING' : 'STOP & SAVE',
+                            style: PaceUpTypography.label(
+                              PaceUpColors.greenInk,
+                            ).copyWith(
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
             ],
           ),
         ),

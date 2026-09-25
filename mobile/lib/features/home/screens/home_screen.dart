@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../auth/services/auth_state.dart';
 import '../../dashboard/models/dashboard_models.dart';
 import '../../dashboard/services/dashboard_service.dart';
 import '../../streaks/models/streak_models.dart';
 import '../../streaks/services/streak_service.dart';
-import '../../streaks/widgets/streak_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final AuthController authController;
 
-  const HomeScreen({super.key, required this.authController});
+  const HomeScreen({
+    super.key,
+    required this.authController,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -31,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
     _dashboardService = DashboardService();
     _streakService = StreakService();
 
@@ -170,46 +175,55 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _dashboard == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const _LoadingState();
     }
 
     if (_errorMessage != null && _dashboard == null) {
-      return _ErrorState(message: _errorMessage!, onRetry: _loadDashboard);
+      return _ErrorState(
+        message: _errorMessage!,
+        onRetry: _loadDashboard,
+      );
     }
 
     final dashboard = _dashboard!;
 
     return RefreshIndicator(
+      color: PaceUpColors.electricGreen,
+      backgroundColor: PaceUpColors.darkPanel,
       onRefresh: () async {
-        await Future.wait([_loadDashboard(), _loadStreak()]);
+        await Future.wait([
+          _loadDashboard(),
+          _loadStreak(),
+        ]);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           _GreetingSection(
             displayName:
-                widget.authController.state.user?.displayName ?? 'runner',
+                widget.authController.state.user?.displayName ?? 'Runner',
           ),
           const SizedBox(height: 24),
-          _SectionTitle(title: 'Your Progress'),
+          _StreakHero(
+            streak: _streak,
+            isLoading: _isStreakLoading,
+          ),
+          const SizedBox(height: 28),
+          const _SectionHeader(
+            eyebrow: 'ACTIVITY',
+            title: 'Your numbers',
+          ),
           const SizedBox(height: 12),
           _SummaryGrid(
             summary: dashboard.activitySummary,
             formatDuration: _formatDuration,
           ),
-          const SizedBox(height: 16),
-          if (_isStreakLoading)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            )
-          else if (_streak != null)
-            StreakCard(streak: _streak!),
           const SizedBox(height: 28),
-          _SectionTitle(title: 'Active Goals'),
+          const _SectionHeader(
+            eyebrow: 'TARGETS',
+            title: 'Active goals',
+          ),
           const SizedBox(height: 12),
           if (dashboard.activeGoals.isEmpty)
             const _EmptyCard(
@@ -219,12 +233,18 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             ...dashboard.activeGoals.map(
               (goal) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _GoalCard(goal: goal, formatGoalValue: _formatGoalValue),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _GoalCard(
+                  goal: goal,
+                  formatGoalValue: _formatGoalValue,
+                ),
               ),
             ),
-          const SizedBox(height: 16),
-          _SectionTitle(title: 'Recent Activities'),
+          const SizedBox(height: 18),
+          const _SectionHeader(
+            eyebrow: 'HISTORY',
+            title: 'Recent activities',
+          ),
           const SizedBox(height: 12),
           if (dashboard.recentActivities.isEmpty)
             const _EmptyCard(
@@ -234,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             ...dashboard.recentActivities.map(
               (activity) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: _ActivityCard(
                   activity: activity,
                   icon: _activityIcon(activity.type),
@@ -253,41 +273,224 @@ class _HomeScreenState extends State<HomeScreen> {
 class _GreetingSection extends StatelessWidget {
   final String displayName;
 
-  const _GreetingSection({required this.displayName});
+  const _GreetingSection({
+    required this.displayName,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text('Welcome back,', style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 4),
-        Text(
-          '$displayName!',
-          style: Theme.of(context).textTheme.headlineMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text(
+                'Welcome back,',
+                style: PaceUpTypography.body(
+                  PaceUpColors.darkMuted,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: PaceUpTypography.display(
+                  PaceUpColors.darkText,
+                ).copyWith(
+                  fontSize: 42,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Keep moving. Keep building.',
+                style: PaceUpTypography.body(
+                  PaceUpColors.darkMuted,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Keep moving and keep making progress.',
-          style: Theme.of(context).textTheme.bodyMedium,
+        const SizedBox(width: 16),
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: PaceUpColors.darkPanel,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: PaceUpColors.darkBorder,
+            ),
+          ),
+          child: const Icon(
+            Icons.bolt_rounded,
+            color: PaceUpColors.electricGreen,
+          ),
         ),
       ],
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
+class _StreakHero extends StatelessWidget {
+  final StreakResponse? streak;
+  final bool isLoading;
 
-  const _SectionTitle({required this.title});
+  const _StreakHero({
+    required this.streak,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge
-          ?.copyWith(fontWeight: FontWeight.bold),
+    if (isLoading) {
+      return Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: PaceUpColors.darkPanel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: PaceUpColors.darkBorder,
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: PaceUpColors.electricGreen,
+          ),
+        ),
+      );
+    }
+
+    final currentStreak = streak?.currentStreak ?? 0;
+    final longestStreak = streak?.longestStreak ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -24,
+            top: -38,
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: PaceUpColors.electricGreen.withValues(
+                    alpha: 0.12,
+                  ),
+                  width: 22,
+                ),
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: PaceUpColors.electricGreen,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: PaceUpColors.greenInk,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CURRENT STREAK',
+                      style: PaceUpTypography.label(
+                        PaceUpColors.darkMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '$currentStreak',
+                          style: PaceUpTypography.largeMetric(
+                            PaceUpColors.darkText,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 7),
+                          child: Text(
+                            currentStreak == 1 ? 'DAY' : 'DAYS',
+                            style: PaceUpTypography.label(
+                              PaceUpColors.electricGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Best: $longestStreak days',
+                      style: PaceUpTypography.body(
+                        PaceUpColors.darkMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+
+  const _SectionHeader({
+    required this.eyebrow,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: PaceUpTypography.sectionTitle(
+            PaceUpColors.electricGreen,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          title,
+          style: PaceUpTypography.heading(
+            PaceUpColors.darkText,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -296,36 +499,39 @@ class _SummaryGrid extends StatelessWidget {
   final DashboardActivitySummary summary;
   final String Function(int) formatDuration;
 
-  const _SummaryGrid({required this.summary, required this.formatDuration});
+  const _SummaryGrid({
+    required this.summary,
+    required this.formatDuration,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GridView.count(
       crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      mainAxisExtent: 120,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      mainAxisExtent: 108,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
         _SummaryCard(
           icon: Icons.directions_run_rounded,
-          label: 'Activities',
+          label: 'ACTIVITIES',
           value: summary.totalActivities.toString(),
         ),
         _SummaryCard(
           icon: Icons.straighten_rounded,
-          label: 'Distance',
+          label: 'DISTANCE',
           value: '${summary.totalDistance.toStringAsFixed(1)} km',
         ),
         _SummaryCard(
           icon: Icons.timer_outlined,
-          label: 'Duration',
+          label: 'DURATION',
           value: formatDuration(summary.totalDurationSeconds),
         ),
         _SummaryCard(
           icon: Icons.local_fire_department_outlined,
-          label: 'Calories',
+          label: 'CALORIES',
           value: '${summary.totalCalories} kcal',
         ),
       ],
@@ -346,32 +552,45 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: PaceUpColors.electricCyan,
+          ),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: PaceUpTypography.largeMetric(
+              PaceUpColors.darkText,
+            ).copyWith(
+              fontSize: 32,
+            ),
+          ),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: PaceUpTypography.label(
+              PaceUpColors.darkMuted,
+            ).copyWith(
+              fontSize: 8,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -381,73 +600,92 @@ class _GoalCard extends StatelessWidget {
   final DashboardGoal goal;
   final String Function(String, double) formatGoalValue;
 
-  const _GoalCard({required this.goal, required this.formatGoalValue});
+  const _GoalCard({
+    required this.goal,
+    required this.formatGoalValue,
+  });
 
   @override
   Widget build(BuildContext context) {
     final progress = (goal.progressPercentage / 100).clamp(0.0, 1.0);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${goal.type[0].toUpperCase()}'
-                    '${goal.type.substring(1)} Goal',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${goal.progressPercentage.toStringAsFixed(0)}%',
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    '${formatGoalValue(goal.type, goal.current)} / '
-                    '${formatGoalValue(goal.type, goal.target)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (!goal.isCompleted)
-                  Flexible(
-                    child: Text(
-                      '${formatGoalValue(goal.type, goal.remaining)} left',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  )
-                else
-                  const Icon(Icons.check_circle_outline, size: 20),
-              ],
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${goal.type[0].toUpperCase()}'
+                  '${goal.type.substring(1)} Goal',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PaceUpTypography.bodyMedium(
+                    PaceUpColors.darkText,
+                  ),
+                ),
+              ),
+              Text(
+                '${goal.progressPercentage.toStringAsFixed(0)}%',
+                style: PaceUpTypography.bodyMedium(
+                  PaceUpColors.electricGreen,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: PaceUpColors.darkPanelSecondary,
+              valueColor: const AlwaysStoppedAnimation(
+                PaceUpColors.electricGreen,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${formatGoalValue(goal.type, goal.current)} / '
+                  '${formatGoalValue(goal.type, goal.target)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PaceUpTypography.body(
+                    PaceUpColors.darkMuted,
+                  ),
+                ),
+              ),
+              if (goal.isCompleted)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: PaceUpColors.electricGreen,
+                )
+              else
+                Text(
+                  '${formatGoalValue(goal.type, goal.remaining)} left',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PaceUpTypography.body(
+                    PaceUpColors.darkMuted,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -470,65 +708,79 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(child: Icon(icon)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    formatActivityType(activity.type),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatDate(activity.startedAt)} • '
-                    '${formatDuration(activity.durationSeconds)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              flex: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${activity.distance.toStringAsFixed(1)} km',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  if (activity.calories != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '${activity.calories} kcal',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 13,
+      ),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: PaceUpColors.darkPanelSecondary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: PaceUpColors.electricGreen,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatActivityType(activity.type),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PaceUpTypography.bodyMedium(
+                    PaceUpColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${formatDate(activity.startedAt)} • '
+                  '${formatDuration(activity.durationSeconds)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PaceUpTypography.body(
+                    PaceUpColors.darkMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${activity.distance.toStringAsFixed(1)} km',
+                style: PaceUpTypography.bodyMedium(
+                  PaceUpColors.darkText,
+                ),
+              ),
+              if (activity.calories != null)
+                Text(
+                  '${activity.calories} kcal',
+                  style: PaceUpTypography.body(
+                    PaceUpColors.darkMuted,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -538,21 +790,55 @@ class _EmptyCard extends StatelessWidget {
   final IconData icon;
   final String message;
 
-  const _EmptyCard({required this.icon, required this.message});
+  const _EmptyCard({
+    required this.icon,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 28,
+      ),
+      decoration: BoxDecoration(
+        color: PaceUpColors.darkPanel,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: PaceUpColors.darkBorder,
         ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 32,
+            color: PaceUpColors.darkMuted,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: PaceUpTypography.body(
+              PaceUpColors.darkMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: PaceUpColors.electricGreen,
       ),
     );
   }
@@ -562,7 +848,10 @@ class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -571,17 +860,28 @@ class _ErrorState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 48),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: PaceUpColors.darkMuted,
+            ),
             const SizedBox(height: 16),
             Text(
               'Unable to load dashboard',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: PaceUpTypography.heading(
+                PaceUpColors.darkText,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              style: PaceUpTypography.body(
+                PaceUpColors.darkMuted,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onRetry,

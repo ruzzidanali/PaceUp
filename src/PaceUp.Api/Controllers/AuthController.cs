@@ -156,4 +156,20 @@ public class AuthController : ControllerBase
 
         return NoContent();
     }
+
+    [AllowAnonymous]
+    [HttpGet("reset-password-link")]
+    public IActionResult ResetPasswordLink(
+    [FromQuery] string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("Reset token is required.");
+        }
+
+        var appUrl =
+            $"paceup://reset-password?token={Uri.EscapeDataString(token)}";
+
+        return Redirect(appUrl);
+    }
 }

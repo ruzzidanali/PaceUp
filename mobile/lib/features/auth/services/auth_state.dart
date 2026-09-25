@@ -101,6 +101,17 @@ class AuthController {
     }
   }
 
+  Future<void> forgotPassword({required String email}) async {
+    await _authService.forgotPassword(email: email);
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    await _authService.resetPassword(token: token, newPassword: newPassword);
+  }
+
   Future<void> logout() async {
     try {
       await _authService.logout();

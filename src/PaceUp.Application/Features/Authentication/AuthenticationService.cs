@@ -4,6 +4,7 @@ using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.DTOs.Authentication;
 using PaceUp.Application.Exceptions;
 using PaceUp.Domain.Entities;
+using PaceUp.Application.Abstractions.Communication;
 
 namespace PaceUp.Application.Features.Authentication;
 
@@ -15,6 +16,7 @@ public class AuthenticationService : IAuthenticationService
     private readonly IPasswordResetTokenService _passwordResetTokenService;
     private readonly IEmailVerificationTokenService _emailVerificationTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IEmailService _emailService;
 
     public AuthenticationService(
         IApplicationDbContext dbContext,
@@ -22,7 +24,8 @@ public class AuthenticationService : IAuthenticationService
         IJwtTokenService jwtTokenService,
         IEmailVerificationTokenService emailVerificationTokenService,
         IPasswordResetTokenService passwordResetTokenService,
-        IRefreshTokenService refreshTokenService)
+        IRefreshTokenService refreshTokenService,
+        IEmailService emailService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
@@ -30,6 +33,7 @@ public class AuthenticationService : IAuthenticationService
         _emailVerificationTokenService = emailVerificationTokenService;
         _passwordResetTokenService = passwordResetTokenService;
         _refreshTokenService = refreshTokenService;
+        _emailService = emailService;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -115,7 +119,9 @@ public class AuthenticationService : IAuthenticationService
     {
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(
-                x => x.Email == request.Email,
+                x =>
+                    x.Email == request.Email ||
+                    x.Username == request.Email,
                 cancellationToken);
 
         if (user is null)
@@ -366,6 +372,11 @@ public class AuthenticationService : IAuthenticationService
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
+
+        await _emailService.SendPasswordResetEmailAsync(
+            user.Email,
+            token,
+            cancellationToken);
     }
 
     public async Task<PasswordResetResponse> ResetPasswordAsync(
@@ -397,23 +408,28 @@ public class AuthenticationService : IAuthenticationService
         }
 
         var identity =
-            await _dbContext.UserIdentities
-                .FirstOrDefaultAsync(
-                    x => x.UserId == resetToken.UserId,
-                    cancellationToken);
-
-        if (identity is null)
-        {
-            throw new UnauthorizedAccessException(
-                "Unable to reset password.");
-        }
+    await _dbContext.UserIdentities
+        .FirstOrDefaultAsync(
+            x => x.UserId == resetToken.UserId,
+            cancellationToken);
 
         var passwordHash =
             _passwordHasher.Hash(
                 request.NewPassword);
 
-        identity.UpdatePassword(
-            passwordHash);
+        if (identity is null)
+        {
+            identity = new UserIdentity(
+                resetToken.UserId,
+                passwordHash);
+
+            _dbContext.UserIdentities.Add(identity);
+        }
+        else
+        {
+            identity.UpdatePassword(
+                passwordHash);
+        }
 
         resetToken.MarkAsUsed();
 
