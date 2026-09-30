@@ -90,11 +90,15 @@ public class GlobalExceptionHandler : IExceptionHandler
                 "An unexpected error occurred."
         };
 
+        var detail = statusCode == StatusCodes.Status500InternalServerError
+            ? "An unexpected error occurred. Please try again later."
+            : exception.Message;
+
         var problemDetails = new ProblemDetails
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message
+            Detail = detail
         };
 
         httpContext.Response.StatusCode = statusCode;

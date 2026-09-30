@@ -55,6 +55,13 @@ public class FakeRefreshTokenService
         _token = token;
     }
 
+    public Task RevokeAllAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task<string> CreateAsync(
         Guid userId,
         CancellationToken cancellationToken)
@@ -88,12 +95,24 @@ public class FakeEmailService : IEmailService
 {
     public List<(string Email, string ResetToken)> SentPasswordResetEmails { get; } = [];
 
+    public List<(string Email, string VerificationToken)> SentEmailVerificationEmails { get; } = [];
+
     public Task SendPasswordResetEmailAsync(
         string email,
         string resetToken,
         CancellationToken cancellationToken)
     {
         SentPasswordResetEmails.Add((email, resetToken));
+
+        return Task.CompletedTask;
+    }
+
+    public Task SendEmailVerificationAsync(
+        string email,
+        string verificationToken,
+        CancellationToken cancellationToken)
+    {
+        SentEmailVerificationEmails.Add((email, verificationToken));
 
         return Task.CompletedTask;
     }
@@ -742,7 +761,7 @@ public class AuthenticationServiceTests
                     x => x.UserId == user.Id);
 
         Assert.Equal(
-            "reset-token",
+            TokenHashing.Hash("reset-token"),
             resetToken.Token);
 
         Assert.True(
@@ -759,7 +778,7 @@ public class AuthenticationServiceTests
             sentEmail.Email);
 
         Assert.Equal(
-            resetToken.Token,
+            "reset-token",
             sentEmail.ResetToken);
     }
 
@@ -838,7 +857,7 @@ public class AuthenticationServiceTests
         var resetToken =
             new PasswordResetToken(
                 user.Id,
-                "valid-reset-token",
+                TokenHashing.Hash("valid-reset-token"),
                 DateTime.UtcNow.AddHours(1));
 
         db.Users.Add(user);
@@ -1008,7 +1027,7 @@ public class AuthenticationServiceTests
         var resetToken =
             new PasswordResetToken(
                 user.Id,
-                "used-token",
+                TokenHashing.Hash("used-token"),
                 DateTime.UtcNow.AddHours(1));
 
         resetToken.MarkAsUsed();
@@ -1054,7 +1073,7 @@ public class AuthenticationServiceTests
         var resetToken =
             new PasswordResetToken(
                 user.Id,
-                "missing-identity-token",
+                TokenHashing.Hash("missing-identity-token"),
                 DateTime.UtcNow.AddHours(1));
 
         db.Users.Add(user);
@@ -1431,7 +1450,7 @@ public class AuthenticationServiceTests
                     x => x.UserId == result.UserId);
 
         Assert.Equal(
-            "test-verification-token",
+            TokenHashing.Hash("test-verification-token"),
             token.Token);
 
         Assert.True(
@@ -1502,7 +1521,7 @@ public class AuthenticationServiceTests
                     x => x.UserId == user.Id);
 
         Assert.Equal(
-            "new-verification-token",
+            TokenHashing.Hash("new-verification-token"),
             token.Token);
 
         Assert.False(token.IsExpired());
@@ -1559,7 +1578,7 @@ public class AuthenticationServiceTests
         var existingToken =
             new EmailVerificationToken(
                 user.Id,
-                "old-verification-token",
+                TokenHashing.Hash("old-verification-token"),
                 DateTime.UtcNow.AddHours(24));
 
         db.Users.Add(user);
@@ -1583,12 +1602,15 @@ public class AuthenticationServiceTests
 
         Assert.Contains(
             tokens,
-            x => x.Token == "new-verification-token");
+            x =>
+                x.Token ==
+                TokenHashing.Hash("new-verification-token"));
 
         Assert.Contains(
             tokens,
             x =>
-                x.Token == "old-verification-token" &&
+                x.Token ==
+                TokenHashing.Hash("old-verification-token") &&
                 x.IsExpired());
     }
 

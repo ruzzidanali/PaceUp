@@ -3,14 +3,14 @@ using PaceUp.Application.DTOs.Authentication;
 
 namespace PaceUp.Application.Features.Authentication;
 
-public class ChangePasswordRequestValidator
-    : AbstractValidator<ChangePasswordRequest>
+public class ResetPasswordRequestValidator
+    : AbstractValidator<ResetPasswordRequest>
 {
-    public ChangePasswordRequestValidator()
+    public ResetPasswordRequestValidator()
     {
-        RuleFor(x => x.CurrentPassword)
+        RuleFor(x => x.Token)
             .NotEmpty()
-            .WithMessage("Current password is required.");
+            .WithMessage("Password reset token is required.");
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()
@@ -20,10 +20,5 @@ public class ChangePasswordRequestValidator
             .Must(PasswordRules.IsValid)
             .WithMessage(
                 "New password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.");
-
-        RuleFor(x => x.NewPassword)
-            .NotEqual(x => x.CurrentPassword)
-            .WithMessage(
-                "New password must be different from the current password.");
     }
 }

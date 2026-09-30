@@ -93,6 +93,26 @@ public class RefreshTokenService : IRefreshTokenService
             cancellationToken);
     }
 
+    public async Task RevokeAllAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        var tokens =
+            await _dbContext.RefreshTokens
+                .Where(x =>
+                    x.UserId == userId &&
+                    x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+
+        foreach (var token in tokens)
+        {
+            token.Revoke();
+        }
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
     public async Task<string?> RotateAsync(
         string refreshToken,
         CancellationToken cancellationToken)

@@ -75,20 +75,25 @@ public class AuthenticationService : IAuthenticationService
             passwordHash);
 
         var verificationToken =
-    _emailVerificationTokenService.GenerateToken();
+            _emailVerificationTokenService.GenerateToken();
 
         var emailVerificationToken =
             new EmailVerificationToken(
                 user.Id,
-                verificationToken,
+                TokenHashing.Hash(verificationToken),
                 DateTime.UtcNow.AddHours(24));
 
         _dbContext.Users.Add(user);
         _dbContext.UserIdentities.Add(identity);
         _dbContext.EmailVerificationTokens.Add(
-    emailVerificationToken);
+            emailVerificationToken);
 
         await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        await _emailService.SendEmailVerificationAsync(
+            user.Email,
+            verificationToken,
             cancellationToken);
 
         var accessToken =
@@ -225,6 +230,10 @@ public class AuthenticationService : IAuthenticationService
         identity.UpdatePassword(
             newPasswordHash);
 
+        await _refreshTokenService.RevokeAllAsync(
+            userId,
+            cancellationToken);
+
         await _dbContext.SaveChangesAsync(
             cancellationToken);
     }
@@ -284,7 +293,7 @@ public class AuthenticationService : IAuthenticationService
         var verificationToken =
             new EmailVerificationToken(
                 userId,
-                token,
+                TokenHashing.Hash(token),
                 DateTime.UtcNow.AddHours(24));
 
         _dbContext.EmailVerificationTokens.Add(
@@ -292,6 +301,12 @@ public class AuthenticationService : IAuthenticationService
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
+
+        await _emailService.SendEmailVerificationAsync(
+            user.Email,
+            token,
+            cancellationToken
+        );
     }
 
 
@@ -302,7 +317,7 @@ public class AuthenticationService : IAuthenticationService
         var verificationToken =
             await _dbContext.EmailVerificationTokens
                 .FirstOrDefaultAsync(
-                    x => x.Token == token,
+                    x => x.Token == TokenHashing.Hash(token),
                     cancellationToken);
 
         if (verificationToken is null)
@@ -365,7 +380,7 @@ public class AuthenticationService : IAuthenticationService
         var resetToken =
             new PasswordResetToken(
                 user.Id,
-                token,
+                TokenHashing.Hash(token),
                 DateTime.UtcNow.AddHours(1));
 
         _dbContext.PasswordResetTokens.Add(resetToken);
@@ -386,7 +401,7 @@ public class AuthenticationService : IAuthenticationService
         var resetToken =
             await _dbContext.PasswordResetTokens
                 .FirstOrDefaultAsync(
-                    x => x.Token == request.Token,
+                    x => x.Token == TokenHashing.Hash(request.Token),
                     cancellationToken);
 
         if (resetToken is null)
@@ -430,6 +445,10 @@ public class AuthenticationService : IAuthenticationService
             identity.UpdatePassword(
                 passwordHash);
         }
+
+        await _refreshTokenService.RevokeAllAsync(
+            resetToken.UserId,
+            cancellationToken);
 
         resetToken.MarkAsUsed();
 

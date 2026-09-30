@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PaceUp.Api.Extensions;
 using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Application.DTOs.Authentication;
-
+using Microsoft.AspNetCore.RateLimiting;
 namespace PaceUp.Api.Controllers;
 
 [ApiController]
@@ -19,6 +19,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponse>> Register(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
@@ -32,6 +33,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponse>> Login(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
@@ -63,6 +65,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("verify-email")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(
     typeof(EmailVerificationResponse),
     StatusCodes.Status200OK)]
@@ -79,6 +82,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ForgotPassword(
     [FromBody] ForgotPasswordRequest request,
@@ -92,6 +96,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(
         typeof(PasswordResetResponse),
         StatusCodes.Status200OK)]
@@ -127,6 +132,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(
     typeof(RefreshTokenResponse),
     StatusCodes.Status200OK)]
@@ -145,6 +151,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("revoke")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Revoke(
         [FromBody] RefreshTokenRequest request,

@@ -132,6 +132,33 @@ class ApiClient {
     };
   }
 
+  String getErrorMessage(
+    http.Response response, {
+    String fallback = 'Something went wrong. Please try again.',
+  }) {
+    try {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        final detail = decoded['detail'];
+
+        if (detail is String && detail.isNotEmpty) {
+          return detail;
+        }
+
+        final title = decoded['title'];
+
+        if (title is String && title.isNotEmpty) {
+          return title;
+        }
+      }
+    } catch (_) {
+      // Ignore invalid or non-JSON responses.
+    }
+
+    return fallback;
+  }
+
   void dispose() {
     _client.close();
   }

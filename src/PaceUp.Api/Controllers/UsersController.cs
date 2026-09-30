@@ -38,6 +38,51 @@ public class UsersController : ControllerBase
             user);
     }
 
+    private static bool HasValidImageSignature(
+        IFormFile file,
+        string extension
+    )
+    {
+        using var stream = file.OpenReadStream();
+
+        Span<byte> header = stackalloc byte[12];
+
+        var bytesRead = stream.Read(header);
+
+        return extension switch
+        {
+            ".jpg" =>
+                bytesRead >= 3 &&
+                header[0] == 0xFF &&
+                header[1] == 0xD8 &&
+                header[2] == 0xFF,
+
+            ".png" =>
+                bytesRead >= 8 &&
+                header[0] == 0x89 &&
+                header[1] == 0x50 &&
+                header[2] == 0x4E &&
+                header[3] == 0x47 &&
+                header[4] == 0x0D &&
+                header[5] == 0x0A &&
+                header[6] == 0x1A &&
+                header[7] == 0x0A,
+
+            ".webp" =>
+                bytesRead >= 12 &&
+                header[0] == (byte)'R' &&
+                header[1] == (byte)'I' &&
+                header[2] == (byte)'F' &&
+                header[3] == (byte)'F' &&
+                header[8] == (byte)'W' &&
+                header[9] == (byte)'E' &&
+                header[10] == (byte)'B' &&
+                header[11] == (byte)'P',
+
+            _ => false
+        };
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(
         typeof(UserResponse),
@@ -142,8 +187,6 @@ public class UsersController : ControllerBase
             "image/jpg" => ".jpg",
             "image/png" => ".png",
             "image/webp" => ".webp",
-            "image/heic" => ".heic",
-            "image/heif" => ".heif",
             _ => null,
         };
 
@@ -153,6 +196,25 @@ public class UsersController : ControllerBase
                 $"Unsupported image type: {file.ContentType}");
         }
 
+        if (!HasValidImageSignature(file, extension))
+        {
+            return BadRequest(
+                "The uploaded file does not match its declared image type.");
+        }
+
+        var currentUser =
+            await _userService.GetByIdAsync(
+                userId,
+                cancellationToken);
+
+        if (currentUser is null)
+        {
+            return NotFound();
+        }
+
+        var previousImageUrl =
+            currentUser.ProfileImageUrl;
+
         var uploadsPath = Path.Combine(
             Directory.GetCurrentDirectory(),
             "wwwroot",
@@ -161,7 +223,8 @@ public class UsersController : ControllerBase
 
         Directory.CreateDirectory(uploadsPath);
 
-        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var fileName =
+            $"{Guid.NewGuid():N}{extension}";
 
         var filePath = Path.Combine(
             uploadsPath,
@@ -177,17 +240,63 @@ public class UsersController : ControllerBase
         var imageUrl =
             $"{Request.Scheme}://{Request.Host}/uploads/profile-images/{fileName}";
 
-        var user =
-            await _userService.UpdateProfileImageAsync(
-                userId,
-                new UpdateProfileImageRequest(imageUrl),
-                cancellationToken);
+        UserResponse? user;
+
+        try
+        {
+            user =
+                await _userService.UpdateProfileImageAsync(
+                    userId,
+                    new UpdateProfileImageRequest(imageUrl),
+                    cancellationToken);
+        }
+        catch
+        {
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
+
+            throw;
+        }
 
         if (user is null)
         {
-            System.IO.File.Delete(filePath);
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
 
             return NotFound();
+        }
+
+        if (!string.IsNullOrWhiteSpace(previousImageUrl))
+        {
+            var previousFileName =
+                Path.GetFileName(
+                    new Uri(previousImageUrl).AbsolutePath);
+
+            var previousFilePath =
+                Path.Combine(
+                    uploadsPath,
+                    previousFileName);
+
+            if (System.IO.File.Exists(previousFilePath) &&
+                !string.Equals(
+                    previousFilePath,
+                    filePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    System.IO.File.Delete(previousFilePath);
+                }
+                catch
+                {
+                    // The database already points to the new image.
+                    // Keep the new image if old-file cleanup fails.
+                }
+            }
         }
 
         return Ok(user);

@@ -7,7 +7,7 @@ using PaceUp.Application.DTOs.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PaceUp.Infrastructure.Persistence;
-
+using PaceUp.Application.Features.Authentication;
 
 namespace PaceUp.IntegrationTests.Authentication;
 
@@ -539,6 +539,25 @@ public class AuthenticationApiTests
             response.StatusCode);
     }
 
+    private string GetSentVerificationToken(
+    string email)
+    {
+        var emailService =
+            _fixture.Factory.Services
+                .GetRequiredService<FakeEmailService>();
+
+        var sentEmail =
+            emailService.SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == email);
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                sentEmail.VerificationToken));
+
+        return sentEmail.VerificationToken;
+    }
+
     private async Task<string> GetVerificationTokenAsync(
     Guid userId)
     {
@@ -550,37 +569,31 @@ public class AuthenticationApiTests
             scope.ServiceProvider
                 .GetRequiredService<PaceUpDbContext>();
 
-        var verificationToken =
-            await dbContext.EmailVerificationTokens
-                .Where(
-                    x =>
-                        x.UserId == userId &&
-                        x.UsedAt == null &&
-                        x.ExpiresAt > DateTime.UtcNow)
-                .OrderByDescending(
-                    x => x.CreatedAt)
-                .FirstAsync();
+        var user =
+            await dbContext.Users
+                .SingleAsync(
+                    x => x.Id == userId);
 
-        return verificationToken.Token;
+        return GetSentVerificationToken(user.Email);
     }
 
-    private async Task<string> GetPasswordResetTokenAsync(
-    Guid userId)
+    private string GetPasswordResetToken(
+    string email)
     {
-        using var scope =
+        var emailService =
             _fixture.Factory.Services
-                .CreateScope();
+                .GetRequiredService<FakeEmailService>();
 
-        var dbContext =
-            scope.ServiceProvider
-                .GetRequiredService<PaceUpDbContext>();
+        var sentEmail =
+            emailService.SentPasswordResetEmails
+                .LastOrDefault(
+                    x => x.Email == email);
 
-        var resetToken =
-            await dbContext.PasswordResetTokens
-                .SingleAsync(
-                    x => x.UserId == userId);
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                sentEmail.ResetToken));
 
-        return resetToken.Token;
+        return sentEmail.ResetToken;
     }
 
     private async Task SetPasswordResetTokenExpiredAsync(
@@ -600,7 +613,7 @@ public class AuthenticationApiTests
                 .SingleAsync(
                     x =>
                         x.UserId == userId &&
-                        x.Token == token);
+                        x.Token == TokenHashing.Hash(token));
 
         resetToken.Expire();
 
@@ -624,7 +637,7 @@ public class AuthenticationApiTests
                 .SingleAsync(
                     x =>
                         x.UserId == userId &&
-                        x.Token == token);
+                        x.Token == TokenHashing.Hash(token));
 
         verificationToken.Expire();
 
@@ -732,8 +745,8 @@ public class AuthenticationApiTests
             forgotPasswordResponse.StatusCode);
 
         var token =
-            await GetPasswordResetTokenAsync(
-                authResponse.UserId);
+            GetPasswordResetToken(
+            registerRequest.Email);
 
         var resetResponse =
             await _client.PostAsJsonAsync(
@@ -821,8 +834,8 @@ public class AuthenticationApiTests
             forgotResponse.StatusCode);
 
         var token =
-            await GetPasswordResetTokenAsync(
-                authResponse.UserId);
+            GetPasswordResetToken(
+            registerRequest.Email);
 
         await SetPasswordResetTokenExpiredAsync(
             authResponse.UserId,
@@ -879,8 +892,8 @@ public class AuthenticationApiTests
             forgotResponse.StatusCode);
 
         var token =
-            await GetPasswordResetTokenAsync(
-                authResponse.UserId);
+            GetPasswordResetToken(
+            registerRequest.Email);
 
         var firstResetResponse =
             await _client.PostAsJsonAsync(

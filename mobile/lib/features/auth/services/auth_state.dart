@@ -105,6 +105,10 @@ class AuthController {
     await _authService.forgotPassword(email: email);
   }
 
+  Future<void> verifyEmail({required String token}) async {
+    await _authService.verifyEmail(token: token);
+  }
+
   Future<void> resetPassword({
     required String token,
     required String newPassword,
@@ -113,11 +117,8 @@ class AuthController {
   }
 
   Future<void> logout() async {
-    try {
-      await _authService.logout();
-    } finally {
-      _state = const AuthState.unauthenticated();
-    }
+    await _authService.logout();
+    _state = const AuthState.unauthenticated();
   }
 
   void dispose() {
