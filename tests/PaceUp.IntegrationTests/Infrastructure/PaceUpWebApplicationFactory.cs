@@ -38,7 +38,9 @@ public class PaceUpWebApplicationFactory
                 services.Remove(emailServiceDescriptor);
             }
 
-            services.AddSingleton<IEmailService, FakeEmailService>();
+            services.AddSingleton<FakeEmailService>();
+            services.AddSingleton<IEmailService>(
+                provider => provider.GetRequiredService<FakeEmailService>());
 
             var descriptor =
                 services.SingleOrDefault(

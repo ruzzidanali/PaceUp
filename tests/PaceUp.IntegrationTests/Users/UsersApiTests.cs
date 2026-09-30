@@ -363,103 +363,252 @@ public class UsersApiTests
     }
 
     [Fact]
-public async Task UpdateProfileImage_ShouldReturnUpdatedUser()
-{
-    await using var factory =
-        new PaceUpWebApplicationFactory(
-            _database);
-
-    using var client = factory.CreateClient();
-
-    await AuthenticateAsync(client);
-
-    using var content = new MultipartFormDataContent();
-
-    var imageBytes = new byte[]
+    public async Task UpdateProfileImage_ShouldReturnUpdatedUser()
     {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        using var content = new MultipartFormDataContent();
+
+        var imageBytes = new byte[]
+        {
         0xFF, 0xD8, 0xFF, 0xE0,
         0x00, 0x10,
         0x4A, 0x46, 0x49, 0x46,
         0x00, 0x01,
         0xFF, 0xD9
-    };
+        };
 
-    var imageContent =
-        new ByteArrayContent(imageBytes);
+        var imageContent =
+            new ByteArrayContent(imageBytes);
 
-    imageContent.Headers.ContentType =
-        new MediaTypeHeaderValue("image/jpeg");
+        imageContent.Headers.ContentType =
+            new MediaTypeHeaderValue("image/jpeg");
 
-    content.Add(
-        imageContent,
-        "file",
-        "profile.jpg");
+        content.Add(
+            imageContent,
+            "file",
+            "profile.jpg");
 
-    var response =
-        await client.PutAsync(
-            "/api/users/me/profile-image",
-            content);
+        var response =
+            await client.PutAsync(
+                "/api/users/me/profile-image",
+                content);
 
-    Assert.Equal(
-        HttpStatusCode.OK,
-        response.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
 
-    var user =
-        await response.Content
-            .ReadFromJsonAsync<UserResponse>();
+        var user =
+            await response.Content
+                .ReadFromJsonAsync<UserResponse>();
 
-    Assert.NotNull(user);
-    Assert.NotNull(user.ProfileImageUrl);
+        Assert.NotNull(user);
+        Assert.NotNull(user.ProfileImageUrl);
 
-    Assert.Contains(
-        "/uploads/profile-images/",
-        user.ProfileImageUrl);
+        Assert.Contains(
+            "/uploads/profile-images/",
+            user.ProfileImageUrl);
 
-    Assert.EndsWith(
-        ".jpg",
-        user.ProfileImageUrl);
-}
+        Assert.EndsWith(
+            ".jpg",
+            user.ProfileImageUrl);
+    }
 
     [Fact]
-public async Task UpdateProfileImage_WithoutToken_ShouldReturnUnauthorized()
-{
-    await using var factory =
-        new PaceUpWebApplicationFactory(
-            _database);
-
-    using var client = factory.CreateClient();
-
-    using var content = new MultipartFormDataContent();
-
-    var imageBytes = new byte[]
+    public async Task UpdateProfileImage_WithInvalidImageSignature_ShouldReturnBadRequest()
     {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        using var content =
+            new MultipartFormDataContent();
+
+        var fakeImageBytes = new byte[]
+        {
+        0x00, 0x01, 0x02, 0x03,
+        0x04, 0x05, 0x06, 0x07
+        };
+
+        var imageContent =
+            new ByteArrayContent(fakeImageBytes);
+
+        imageContent.Headers.ContentType =
+            new MediaTypeHeaderValue("image/jpeg");
+
+        content.Add(
+            imageContent,
+            "file",
+            "profile.jpg");
+
+        var response =
+            await client.PutAsync(
+                "/api/users/me/profile-image",
+                content);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateProfileImage_ShouldReplacePreviousImageFile()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client);
+
+        var uploadsPath =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "uploads",
+                "profile-images");
+
+        async Task<string> UploadImageAsync()
+        {
+            using var content =
+                new MultipartFormDataContent();
+
+            var imageBytes = new byte[]
+            {
+            0xFF, 0xD8, 0xFF, 0xE0,
+            0x00, 0x10,
+            0x4A, 0x46, 0x49, 0x46,
+            0x00, 0x01,
+            0xFF, 0xD9
+            };
+
+            var imageContent =
+                new ByteArrayContent(imageBytes);
+
+            imageContent.Headers.ContentType =
+                new MediaTypeHeaderValue("image/jpeg");
+
+            content.Add(
+                imageContent,
+                "file",
+                "profile.jpg");
+
+            var response =
+                await client.PutAsync(
+                    "/api/users/me/profile-image",
+                    content);
+
+            Assert.Equal(
+                HttpStatusCode.OK,
+                response.StatusCode);
+
+            var user =
+                await response.Content
+                    .ReadFromJsonAsync<UserResponse>();
+
+            Assert.NotNull(user);
+            Assert.NotNull(user.ProfileImageUrl);
+
+            return user.ProfileImageUrl!;
+        }
+
+        var firstImageUrl =
+            await UploadImageAsync();
+
+        var firstFileName =
+            Path.GetFileName(
+                new Uri(firstImageUrl).AbsolutePath);
+
+        var firstFilePath =
+            Path.Combine(
+                uploadsPath,
+                firstFileName);
+
+        Assert.True(
+            File.Exists(firstFilePath),
+            "The first uploaded image file should exist.");
+
+        var secondImageUrl =
+            await UploadImageAsync();
+
+        var secondFileName =
+            Path.GetFileName(
+                new Uri(secondImageUrl).AbsolutePath);
+
+        var secondFilePath =
+            Path.Combine(
+                uploadsPath,
+                secondFileName);
+
+        Assert.NotEqual(
+            firstImageUrl,
+            secondImageUrl);
+
+        Assert.True(
+            File.Exists(secondFilePath),
+            "The second uploaded image file should exist.");
+
+        Assert.False(
+            File.Exists(firstFilePath),
+            "The previous profile image file should have been deleted.");
+
+        if (File.Exists(secondFilePath))
+        {
+            File.Delete(secondFilePath);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfileImage_WithoutToken_ShouldReturnUnauthorized()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(
+                _database);
+
+        using var client = factory.CreateClient();
+
+        using var content = new MultipartFormDataContent();
+
+        var imageBytes = new byte[]
+        {
         0xFF, 0xD8, 0xFF, 0xE0,
         0x00, 0x10,
         0x4A, 0x46, 0x49, 0x46,
         0x00, 0x01,
         0xFF, 0xD9
-    };
+        };
 
-    var imageContent =
-        new ByteArrayContent(imageBytes);
+        var imageContent =
+            new ByteArrayContent(imageBytes);
 
-    imageContent.Headers.ContentType =
-        new MediaTypeHeaderValue("image/jpeg");
+        imageContent.Headers.ContentType =
+            new MediaTypeHeaderValue("image/jpeg");
 
-    content.Add(
-        imageContent,
-        "file",
-        "profile.jpg");
+        content.Add(
+            imageContent,
+            "file",
+            "profile.jpg");
 
-    var response =
-        await client.PutAsync(
-            "/api/users/me/profile-image",
-            content);
+        var response =
+            await client.PutAsync(
+                "/api/users/me/profile-image",
+                content);
 
-    Assert.Equal(
-        HttpStatusCode.Unauthorized,
-        response.StatusCode);
-}
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
 
     [Fact]
     public async Task DeleteMe_ShouldDeleteCurrentUser()

@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../models/auth_models.dart';
@@ -64,6 +66,33 @@ class AuthService {
     return authResponse;
   }
 
+  Future<void> verifyEmail({required String token}) async {
+    final response = await _apiClient.post(
+      '/auth/verify-email',
+      body: {'token': token},
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception(
+          'This email verification link is invalid or has expired.',
+        );
+      }
+
+      if (response.statusCode == 409) {
+        throw Exception('This email has already been verified.');
+      }
+
+      throw Exception('Unable to verify your email. Please try again.');
+    }
+
+    final result = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (result['verified'] != true) {
+      throw Exception('Unable to verify your email. Please try again.');
+    }
+  }
+
   Future<UserModel> getCurrentUser() async {
     final accessToken = await _tokenStorage.getAccessToken();
 
@@ -118,59 +147,40 @@ class AuthService {
     return result;
   }
 
-  Future<void> forgotPassword({
-  required String email,
-}) async {
-  final response = await http.post(
-    Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'email': email,
-    }),
-  );
-
-  if (response.statusCode != 204) {
-    throw Exception(
-      'Unable to send password reset email. Please try again.',
+  Future<void> forgotPassword({required String email}) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
     );
+
+    if (response.statusCode != 204) {
+      throw Exception('Unable to send password reset email. Please try again.');
+    }
   }
-}
 
-Future<void> resetPassword({
-  required String token,
-  required String newPassword,
-}) async {
-  final response = await http.post(
-    Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'token': token,
-      'newPassword': newPassword,
-    }),
-  );
-
-  if (response.statusCode != 200) {
-    if (response.statusCode == 401) {
-      throw Exception(
-        'This password reset link is invalid or has expired.',
-      );
-    }
-
-    if (response.statusCode == 409) {
-      throw Exception(
-        'This password reset link has already been used.',
-      );
-    }
-
-    throw Exception(
-      'Unable to reset your password. Please try again.',
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': token, 'newPassword': newPassword}),
     );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception('This password reset link is invalid or has expired.');
+      }
+
+      if (response.statusCode == 409) {
+        throw Exception('This password reset link has already been used.');
+      }
+
+      throw Exception('Unable to reset your password. Please try again.');
+    }
   }
-}
 
   Future<void> revoke() async {
     final refreshToken = await _tokenStorage.getRefreshToken();

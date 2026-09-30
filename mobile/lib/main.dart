@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/reset_password_screen.dart';
 import 'features/auth/services/auth_state.dart';
+import 'features/auth/screens/verify_email_screen.dart';
 
 void main() {
   runApp(const PaceUpApp());
@@ -24,12 +25,12 @@ class _PaceUpAppState extends State<PaceUpApp> {
   late final AuthController _authController;
 
   final AppLinks _appLinks = AppLinks();
-  final GlobalKey<NavigatorState> _navigatorKey =
-      GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   StreamSubscription<Uri>? _linkSubscription;
 
   String? _pendingResetToken;
+  String? _pendingVerificationToken;
 
   @override
   void initState() {
@@ -63,32 +64,50 @@ class _PaceUpAppState extends State<PaceUpApp> {
       return;
     }
 
-    if (uri.host != 'reset-password') {
-      return;
-    }
-
     final token = uri.queryParameters['token'];
 
     if (token == null || token.isEmpty) {
       return;
     }
 
-    _pendingResetToken = token;
+    if (uri.host == 'reset-password') {
+      _pendingResetToken = token;
 
-    final navigator = _navigatorKey.currentState;
+      final navigator = _navigatorKey.currentState;
 
-    if (navigator != null) {
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => ResetPasswordScreen(
-            authController: _authController,
-            token: token,
+      if (navigator != null) {
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(
+              authController: _authController,
+              token: token,
+            ),
           ),
-        ),
-        (route) => false,
-      );
+          (route) => false,
+        );
 
-      return;
+        return;
+      }
+    }
+
+    if (uri.host == 'verify-email') {
+      _pendingVerificationToken = token;
+
+      final navigator = _navigatorKey.currentState;
+
+      if (navigator != null) {
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(
+              authController: _authController,
+              token: token,
+            ),
+          ),
+          (route) => false,
+        );
+
+        return;
+      }
     }
 
     if (mounted) {
@@ -134,23 +153,24 @@ class _PaceUpAppState extends State<PaceUpApp> {
       );
     }
 
+    final verificationToken = _pendingVerificationToken;
+
+    if (verificationToken != null && verificationToken.isNotEmpty) {
+      return VerifyEmailScreen(
+        authController: _authController,
+        token: verificationToken,
+      );
+    }
+
     switch (_authController.state.status) {
       case AuthStatus.loading:
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
       case AuthStatus.authenticated:
-        return AppShell(
-          authController: _authController,
-        );
+        return AppShell(authController: _authController);
 
       case AuthStatus.unauthenticated:
-        return LoginScreen(
-          authController: _authController,
-        );
+        return LoginScreen(authController: _authController);
     }
   }
 }

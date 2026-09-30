@@ -43,7 +43,7 @@ class ActivityService {
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to load activities: '
-        '${response.statusCode} ${response.body}',
+        '${_apiClient.getErrorMessage(response)}',
       );
     }
 
