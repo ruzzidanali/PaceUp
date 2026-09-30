@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+mobile
+tests
+**/bin
+**/obj
+*.user
+*.suo
+*.db
+*.sqlite
+*.log
+test-output.txt
+stats-test.txt
+README.md
+docker-compose.yml
