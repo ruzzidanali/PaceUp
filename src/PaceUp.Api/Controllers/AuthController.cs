@@ -81,6 +81,22 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
+    [HttpGet("verify-email")]
+    public IActionResult VerifyEmailLink(
+    [FromQuery] string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("Verification token is missing.");
+        }
+
+        var deepLink =
+            $"paceup://verify-email?token={Uri.EscapeDataString(token)}";
+
+        return Redirect(deepLink);
+    }
+
     [HttpPost("forgot-password")]
     [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
