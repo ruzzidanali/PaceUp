@@ -168,6 +168,12 @@ public class AuthenticationService : IAuthenticationService
                 "Invalid email or password.");
         }
 
+        if (!identity.EmailVerified)
+        {
+            throw new UnauthorizedAccessException(
+                "Please verify your email before signing in.");
+        }
+
         identity.ResetFailedLogins();
 
         await _dbContext.SaveChangesAsync(
