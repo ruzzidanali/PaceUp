@@ -23,11 +23,14 @@ class AuthService {
     );
 
     if (response.statusCode != 200) {
-      if (response.statusCode == 401) {
-        throw Exception('Invalid username or email, or password.');
-      }
-
-      throw Exception('Unable to sign in. Please try again.');
+      throw Exception(
+        _apiClient.getErrorMessage(
+          response,
+          fallback: response.statusCode == 401
+              ? 'Invalid username or email, or password.'
+              : 'Unable to sign in. Please try again.',
+        ),
+      );
     }
 
     final authResponse = AuthResponse.fromJson(
