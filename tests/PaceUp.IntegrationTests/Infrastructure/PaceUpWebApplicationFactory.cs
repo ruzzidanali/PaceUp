@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PaceUp.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PaceUp.Application.Abstractions.Communication;
+using PaceUp.Infrastructure.Persistence;
+using PaceUp.Infrastructure.Storage;
+using PaceUp.IntegrationTests.Users;
 
 namespace PaceUp.IntegrationTests.Infrastructure;
 
@@ -26,12 +29,11 @@ public class PaceUpWebApplicationFactory
 
         builder.ConfigureServices(services =>
         {
-
             var emailServiceDescriptor =
-        services.SingleOrDefault(
-            d =>
-                d.ServiceType ==
-                typeof(IEmailService));
+                services.SingleOrDefault(
+                    d =>
+                        d.ServiceType ==
+                        typeof(IEmailService));
 
             if (emailServiceDescriptor is not null)
             {
@@ -39,15 +41,24 @@ public class PaceUpWebApplicationFactory
             }
 
             services.AddSingleton<FakeEmailService>();
+
             services.AddSingleton<IEmailService>(
-                provider => provider.GetRequiredService<FakeEmailService>());
+                provider =>
+                    provider.GetRequiredService<FakeEmailService>());
+
+            services.RemoveAll<IProfileImageStorage>();
+
+            services.AddSingleton<FakeProfileImageStorage>();
+
+            services.AddSingleton<IProfileImageStorage>(
+                provider =>
+                    provider.GetRequiredService<FakeProfileImageStorage>());
 
             var descriptor =
                 services.SingleOrDefault(
                     d =>
                         d.ServiceType ==
-                        typeof(
-                            DbContextOptions<PaceUpDbContext>));
+                        typeof(DbContextOptions<PaceUpDbContext>));
 
             if (descriptor is not null)
             {
@@ -77,5 +88,11 @@ public class PaceUpWebApplicationFactory
 
             dbContext.Database.Migrate();
         });
+    }
+
+    public FakeEmailService GetFakeEmailService()
+    {
+        return Services
+            .GetRequiredService<FakeEmailService>();
     }
 }

@@ -46,7 +46,7 @@ public class NotificationsApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var response =
             await client.GetAsync(
@@ -75,7 +75,8 @@ public class NotificationsApiTests
             factory.CreateClient();
 
         await AuthenticateAsync(
-            followerClient);
+    followerClient,
+    factory);
 
         var follower =
             await GetCurrentUserAsync(
@@ -87,7 +88,8 @@ public class NotificationsApiTests
         var target =
             await RegisterAndAuthenticateAsync(
                 targetClient,
-                "notification_target");
+                "notification_target",
+                factory);
 
         var followResponse =
             await followerClient.PostAsync(
@@ -146,7 +148,8 @@ public class NotificationsApiTests
             factory.CreateClient();
 
         await AuthenticateAsync(
-            followerClient);
+    followerClient,
+    factory);
 
         var follower =
             await GetCurrentUserAsync(
@@ -158,7 +161,8 @@ public class NotificationsApiTests
         var target =
             await RegisterAndAuthenticateAsync(
                 targetClient,
-                "read_notification_target");
+                "read_notification_target",
+                factory);
 
         var followResponse =
             await followerClient.PostAsync(
@@ -231,7 +235,8 @@ public class NotificationsApiTests
             factory.CreateClient();
 
         await AuthenticateAsync(
-            followerClient);
+    followerClient,
+    factory);
 
         var follower =
             await GetCurrentUserAsync(
@@ -243,7 +248,8 @@ public class NotificationsApiTests
         var target =
             await RegisterAndAuthenticateAsync(
                 targetClient,
-                "private_notification_target");
+                "private_notification_target",
+                factory);
 
         var followResponse =
             await followerClient.PostAsync(
@@ -312,7 +318,8 @@ public class NotificationsApiTests
             factory.CreateClient();
 
         await AuthenticateAsync(
-            actorClient);
+            actorClient,
+            factory);
 
         var targetClient =
             factory.CreateClient();
@@ -320,7 +327,8 @@ public class NotificationsApiTests
         var target =
             await RegisterAndAuthenticateAsync(
                 targetClient,
-                "mark_all_target");
+                "mark_all_target",
+                factory);
 
         var otherTargetClient =
             factory.CreateClient();
@@ -328,7 +336,8 @@ public class NotificationsApiTests
         var otherTarget =
             await RegisterAndAuthenticateAsync(
                 otherTargetClient,
-                "mark_all_other_target");
+                "mark_all_other_target",
+                factory);
 
         var actor =
             await GetCurrentUserAsync(
@@ -452,7 +461,8 @@ public class NotificationsApiTests
             factory.CreateClient();
 
         await AuthenticateAsync(
-            followerClient);
+            followerClient,
+            factory);
 
         using var targetClient =
             factory.CreateClient();
@@ -460,7 +470,8 @@ public class NotificationsApiTests
         var target =
             await RegisterAndAuthenticateAsync(
                 targetClient,
-                "duplicate_notification_target");
+                "duplicate_notification_target",
+                factory);
 
         var firstFollow =
             await followerClient.PostAsync(
@@ -498,8 +509,9 @@ public class NotificationsApiTests
         Assert.Single(notifications);
     }
 
-    private static async Task AuthenticateAsync(
-        HttpClient client)
+    private async Task AuthenticateAsync(
+    HttpClient client,
+    PaceUpWebApplicationFactory factory)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
@@ -526,6 +538,29 @@ public class NotificationsApiTests
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
 
+        var fakeEmailService =
+    factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == email);
+
+        Assert.NotEqual(
+            default,
+            verificationEmail);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
+
         var loginResponse =
             await client.PostAsJsonAsync(
                 "/api/auth/login",
@@ -549,9 +584,10 @@ public class NotificationsApiTests
                 auth.AccessToken);
     }
 
-    private static async Task<UserResponse> RegisterAndAuthenticateAsync(
-        HttpClient client,
-        string prefix)
+    private async Task<UserResponse> RegisterAndAuthenticateAsync(
+    HttpClient client,
+    string prefix,
+    PaceUpWebApplicationFactory factory)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N")[..8];
@@ -582,6 +618,29 @@ public class NotificationsApiTests
         Assert.True(
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
+
+        var fakeEmailService =
+    factory.GetFakeEmailService();
+
+var verificationEmail =
+    fakeEmailService
+        .SentEmailVerificationEmails
+        .LastOrDefault(
+            x => x.Email == email);
+
+Assert.NotEqual(
+    default,
+    verificationEmail);
+
+var verifyResponse =
+    await client.PostAsJsonAsync(
+        "/api/auth/verify-email",
+        new VerifyEmailRequest(
+            verificationEmail.VerificationToken));
+
+Assert.True(
+    verifyResponse.IsSuccessStatusCode,
+    $"Email verification failed: {verifyResponse.StatusCode}");
 
         var loginResponse =
             await client.PostAsJsonAsync(

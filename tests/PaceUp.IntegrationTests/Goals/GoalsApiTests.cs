@@ -360,17 +360,16 @@ public class GoalsApiTests
             response.StatusCode);
     }
 
-    private static async Task AuthenticateAsync(
-        HttpClient client)
+    private async Task AuthenticateAsync(HttpClient client)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
 
         var registerRequest =
             new RegisterRequest(
-                $"test_auth_{uniqueId}",
-                $"test_auth_{uniqueId}@example.com",
-                "Test Auth User",
+                $"goals_{uniqueId}",
+                $"goals_{uniqueId}@example.com",
+                "Goals Test User",
                 "Password123!");
 
         var registerResponse =
@@ -381,6 +380,29 @@ public class GoalsApiTests
         Assert.True(
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
+
+        var fakeEmailService =
+    _factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == registerRequest.Email);
+
+        Assert.NotEqual(
+            default,
+            verificationEmail);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
 
         var loginResponse =
             await client.PostAsJsonAsync(

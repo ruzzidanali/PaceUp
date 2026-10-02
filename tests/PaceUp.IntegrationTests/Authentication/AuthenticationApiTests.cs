@@ -70,33 +70,9 @@ public class AuthenticationApiTests
             "Login API User",
             "Password123!");
 
-        var registerResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/register",
-                registerRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            registerResponse.StatusCode);
-
-        var loginRequest = new LoginRequest(
-            "login_api@example.com",
-            "Password123!");
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                loginRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
         var result =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(result);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         Assert.Equal(
             registerRequest.Username,
@@ -104,18 +80,14 @@ public class AuthenticationApiTests
 
         Assert.False(
             string.IsNullOrWhiteSpace(
-                result.RefreshToken
-            ));
+                result.RefreshToken));
 
         Assert.False(
             string.IsNullOrWhiteSpace(
-                result.AccessToken
-            )
-        );
+                result.AccessToken));
 
         Assert.True(
-            result.ExpiresAt > DateTime.UtcNow
-        );
+            result.ExpiresAt > DateTime.UtcNow);
     }
 
     [Fact]
@@ -127,12 +99,20 @@ public class AuthenticationApiTests
             "Wrong Password API User",
             "CorrectPassword123!");
 
-        await _client.PostAsJsonAsync(
-            "/api/auth/register",
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        await VerifyRegisteredUserAsync(
             registerRequest);
 
         var loginRequest = new LoginRequest(
-            "wrong_password_api@example.com",
+            registerRequest.Email,
             "WrongPassword123!");
 
         var response =
@@ -154,31 +134,10 @@ public class AuthenticationApiTests
             "Me API User",
             "Password123!");
 
-        var registerResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/register",
+        var authResponse =
+            await RegisterVerifyAndLoginAsync(
                 registerRequest);
 
-        Assert.Equal(
-            HttpStatusCode.OK,
-            registerResponse.StatusCode);
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    registerRequest.Email,
-                    registerRequest.Password));
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
-        var authResponse =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(authResponse);
         Assert.False(
             string.IsNullOrWhiteSpace(
                 authResponse.AccessToken));
@@ -247,7 +206,6 @@ public class AuthenticationApiTests
     [Fact]
     public async Task ChangePassword_ShouldChangePassword()
     {
-
         var uniqueId = Guid.NewGuid().ToString("N");
 
         var registerRequest = new RegisterRequest(
@@ -256,33 +214,9 @@ public class AuthenticationApiTests
             "Change Password User",
             "OldPassword123!");
 
-        var registerResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/register",
-                registerRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            registerResponse.StatusCode);
-
-        var loginRequest = new LoginRequest(
-            registerRequest.Email,
-            "OldPassword123!");
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                loginRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
         var authResponse =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(authResponse);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(
@@ -303,6 +237,8 @@ public class AuthenticationApiTests
             HttpStatusCode.NoContent,
             changeResponse.StatusCode);
 
+        _client.DefaultRequestHeaders.Authorization = null;
+
         var newLoginResponse =
             await _client.PostAsJsonAsync(
                 "/api/auth/login",
@@ -318,7 +254,6 @@ public class AuthenticationApiTests
     [Fact]
     public async Task ChangePassword_WithWrongCurrentPassword_ShouldReturnUnauthorized()
     {
-
         var uniqueId = Guid.NewGuid().ToString("N");
 
         var registerRequest = new RegisterRequest(
@@ -327,27 +262,9 @@ public class AuthenticationApiTests
             "Wrong Password User",
             "OldPassword123!");
 
-        var registerResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/register",
-                registerRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            registerResponse.StatusCode);
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    registerRequest.Email,
-                    "OldPassword123!"));
-
         var authResponse =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(authResponse);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(
@@ -537,6 +454,65 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    private async Task VerifyRegisteredUserAsync(
+        RegisterRequest registerRequest)
+    {
+        var verificationToken =
+            GetSentVerificationToken(
+                registerRequest.Email);
+
+        var verifyResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationToken));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            verifyResponse.StatusCode);
+    }
+
+    private async Task<AuthResponse> RegisterVerifyAndLoginAsync(
+        RegisterRequest registerRequest)
+    {
+        var registerResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                registerRequest);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            registerResponse.StatusCode);
+
+        var registerResult =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(registerResult);
+
+        await VerifyRegisteredUserAsync(
+            registerRequest);
+
+        var loginResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    registerRequest.Email,
+                    registerRequest.Password));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var loginResult =
+            await loginResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(loginResult);
+
+        return loginResult;
     }
 
     private string GetSentVerificationToken(
@@ -738,15 +714,22 @@ public class AuthenticationApiTests
 
         Assert.NotNull(authResponse);
 
-        var forgotPasswordResponse = await _client.PostAsJsonAsync("/api/auth/forgot-password",
-            new ForgotPasswordRequest(registerRequest.Email));
+        await VerifyRegisteredUserAsync(
+            registerRequest);
 
-        Assert.Equal(HttpStatusCode.NoContent,
+        var forgotPasswordResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/forgot-password",
+                new ForgotPasswordRequest(
+                    registerRequest.Email));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
             forgotPasswordResponse.StatusCode);
 
         var token =
             GetPasswordResetToken(
-            registerRequest.Email);
+                registerRequest.Email);
 
         var resetResponse =
             await _client.PostAsJsonAsync(
@@ -767,6 +750,8 @@ public class AuthenticationApiTests
 
         Assert.True(
             result.Reset);
+
+        _client.DefaultRequestHeaders.Authorization = null;
 
         var loginResponse =
             await _client.PostAsJsonAsync(
@@ -948,27 +933,10 @@ public class AuthenticationApiTests
             await GetVerificationTokenAsync(
                 authResponse.UserId);
 
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    registerRequest.Email,
-                    registerRequest.Password));
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
-        var loginAuthResponse =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(loginAuthResponse);
-
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(
                 "Bearer",
-                loginAuthResponse.AccessToken);
+                authResponse.AccessToken);
 
         var resendResponse =
             await _client.PostAsync(
@@ -986,6 +954,8 @@ public class AuthenticationApiTests
         Assert.NotEqual(
             oldToken,
             newToken);
+
+        _client.DefaultRequestHeaders.Authorization = null;
 
         var response =
             await _client.PostAsJsonAsync(
@@ -1023,41 +993,17 @@ public class AuthenticationApiTests
 
         Assert.NotNull(authResponse);
 
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    registerRequest.Email,
-                    registerRequest.Password));
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
-        var loginAuthResponse =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(loginAuthResponse);
-
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(
-                "Bearer",
-                loginAuthResponse.AccessToken);
-
         var verificationToken =
             await GetVerificationTokenAsync(
                 authResponse.UserId);
 
-        var verifyResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/verify-email",
-                new VerifyEmailRequest(
-                    verificationToken));
+        await VerifyRegisteredUserAsync(
+            registerRequest);
 
-        Assert.Equal(
-            HttpStatusCode.OK,
-            verifyResponse.StatusCode);
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                authResponse.AccessToken);
 
         var resendResponse =
             await _client.PostAsync(
@@ -1067,6 +1013,8 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.Conflict,
             resendResponse.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = null;
     }
 
     [Fact]
@@ -1103,6 +1051,9 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.OK,
             registerResponse.StatusCode);
+
+        await VerifyRegisteredUserAsync(
+            registerRequest);
 
         for (var attempt = 0; attempt < 5; attempt++)
         {
@@ -1150,6 +1101,9 @@ public class AuthenticationApiTests
             HttpStatusCode.OK,
             registerResponse.StatusCode);
 
+        await VerifyRegisteredUserAsync(
+            registerRequest);
+
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var response =
@@ -1185,26 +1139,9 @@ public class AuthenticationApiTests
             "Refresh API User",
             "Password123!");
 
-        await _client.PostAsJsonAsync(
-            "/api/auth/register",
-            registerRequest);
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    "refresh_api@example.com",
-                    "Password123!"));
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
-
         var login =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(login);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         var refreshResponse =
             await _client.PostAsJsonAsync(
@@ -1248,22 +1185,9 @@ public class AuthenticationApiTests
             "Refresh Reuse API User",
             "Password123!");
 
-        await _client.PostAsJsonAsync(
-            "/api/auth/register",
-            registerRequest);
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    "refresh_reuse_api@example.com",
-                    "Password123!"));
-
         var login =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(login);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         var firstRefresh =
             await _client.PostAsJsonAsync(
@@ -1295,22 +1219,9 @@ public class AuthenticationApiTests
             "Revoke API User",
             "Password123!");
 
-        await _client.PostAsJsonAsync(
-            "/api/auth/register",
-            registerRequest);
-
-        var loginResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    "revoke_api@example.com",
-                    "Password123!"));
-
         var login =
-            await loginResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(login);
+            await RegisterVerifyAndLoginAsync(
+                registerRequest);
 
         var revokeResponse =
             await _client.PostAsJsonAsync(

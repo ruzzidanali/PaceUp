@@ -34,7 +34,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_ShouldReturnCreatedActivity()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -93,7 +93,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_ShouldUnlockAchievementAndCreateNotification()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -179,7 +179,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_ShouldReturnCurrentUsersActivities()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -245,7 +245,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivity_ShouldReturnOwnActivity()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -285,7 +285,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_ShouldReturnCurrentUsersStatistics()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -348,7 +348,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_WithDateRange_ShouldReturnStatisticsWithinRange()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -446,7 +446,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_WithTypeAndDateRange_ShouldReturnMatchingStatistics()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -585,7 +585,9 @@ public class ActivitiesApiTests
             response.StatusCode);
     }
 
-    private static async Task AuthenticateAsync(HttpClient client)
+    private static async Task AuthenticateAsync(
+    HttpClient client,
+    PaceUpWebApplicationFactory factory)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
@@ -606,6 +608,35 @@ public class ActivitiesApiTests
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
 
+        var authResponse =
+            await registerResponse.Content
+                .ReadFromJsonAsync<AuthResponse>();
+
+        Assert.NotNull(authResponse);
+
+        var fakeEmailService =
+            factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == registerRequest.Email);
+
+        Assert.NotEqual(
+    default,
+    verificationEmail);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail!.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
+
         var loginResponse =
             await client.PostAsJsonAsync(
                 "/api/auth/login",
@@ -617,7 +648,7 @@ public class ActivitiesApiTests
             loginResponse.IsSuccessStatusCode,
             $"Login failed: {loginResponse.StatusCode}");
 
-        var authResponse =
+        authResponse =
             await loginResponse.Content
                 .ReadFromJsonAsync<AuthResponse>();
 
@@ -632,7 +663,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_ShouldUpdateOwnActivity()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -701,7 +732,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_WhenNotFound_ShouldReturnNotFound()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request =
             new UpdateActivityRequest(
@@ -724,7 +755,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task DeleteActivity_ShouldDeleteOwnActivity()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -766,7 +797,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task DeleteActivity_WhenNotFound_ShouldReturnNotFound()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var response =
             await _client.DeleteAsync(
@@ -780,7 +811,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -810,7 +841,7 @@ public class ActivitiesApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(secondClient, secondFactory);
 
         var response =
             await secondClient.GetAsync(
@@ -826,7 +857,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -855,7 +886,7 @@ public class ActivitiesApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(secondClient, secondFactory);
 
         var updateRequest =
             new UpdateActivityRequest(
@@ -900,7 +931,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task DeleteActivity_WhenOwnedByAnotherUser_ShouldReturnNotFound()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -929,7 +960,7 @@ public class ActivitiesApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(secondClient, secondFactory);
 
         var response =
             await secondClient.DeleteAsync(
@@ -951,7 +982,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_ShouldOnlyReturnCurrentUsersActivities()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var ownerActivityResponse =
             await _client.PostAsJsonAsync(
@@ -980,7 +1011,7 @@ public class ActivitiesApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(secondClient, secondFactory);
 
         var secondUserActivityResponse =
             await secondClient.PostAsJsonAsync(
@@ -1055,7 +1086,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_WithPagination_ShouldReturnCorrectPage()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         for (var i = 1; i <= 5; i++)
         {
@@ -1099,7 +1130,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetMine_WithFromDate_ShouldReturnActivitiesOnOrAfterDate()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var olderResponse =
             await _client.PostAsJsonAsync(
@@ -1167,7 +1198,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetMine_WithToDate_ShouldReturnActivitiesOnOrBeforeDate()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1225,7 +1256,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetMine_WithDateRange_ShouldReturnActivitiesWithinRange()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1301,7 +1332,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetMine_WithTypeAndDateRange_ShouldApplyBothFilters()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1382,7 +1413,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_WithTypeFilter_ShouldReturnOnlyMatchingActivities()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1439,7 +1470,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_WithTypeFilterAndPagination_ShouldReturnCorrectResults()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         for (var i = 1; i <= 5; i++)
         {
@@ -1495,7 +1526,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivities_WithPageSizeAboveMaximum_ShouldLimitTo100()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var pageSizeResponse =
             await _client.GetAsync(
@@ -1519,7 +1550,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_WithInvalidType_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "InvalidActivityType",
@@ -1562,7 +1593,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_WithNegativeDistance_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -1584,7 +1615,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_WithZeroDuration_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -1606,7 +1637,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task CreateActivity_WithNegativeCalories_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var request = new CreateActivityRequest(
             "Run",
@@ -1628,7 +1659,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task UpdateActivity_WithNegativeDistance_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createResponse =
             await _client.PostAsJsonAsync(
@@ -1671,7 +1702,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_ShouldOnlyReturnCurrentUsersStatistics()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1689,7 +1720,7 @@ public class ActivitiesApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(secondClient, secondFactory);
 
         await secondClient.PostAsJsonAsync(
             "/api/activities",
@@ -1745,7 +1776,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityStats_ShouldReturnPaceAndSpeedStatistics()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var createActivityResponse =
             await _client.PostAsJsonAsync(
@@ -1870,7 +1901,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_ByDay_ShouldReturnDailyTotals()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -1963,7 +1994,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_ByWeek_ShouldGroupActivitiesIntoWeeks()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -2024,7 +2055,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_ByMonth_ShouldGroupActivitiesIntoMonths()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -2086,7 +2117,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_WithType_ShouldOnlyIncludeMatchingActivities()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -2134,7 +2165,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_WithDateRange_ShouldOnlyIncludeActivitiesInRange()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         await _client.PostAsJsonAsync(
             "/api/activities",
@@ -2190,7 +2221,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_WithInvalidGroupBy_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var response =
             await _client.GetAsync(
@@ -2204,7 +2235,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetActivityTrends_WithInvalidDateRange_ShouldReturnBadRequest()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var response =
             await _client.GetAsync(
@@ -2232,7 +2263,7 @@ public class ActivitiesApiTests
     [Fact]
     public async Task GetStreaks_ShouldReturnCurrentAndLongestStreak()
     {
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(_client, _factory);
 
         var today = DateTime.UtcNow.Date;
 

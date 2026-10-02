@@ -29,7 +29,9 @@ public class PersonalRecordsControllerTests
     {
         await _fixture.ResetDatabaseAsync();
 
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(
+    _client,
+    _factory);
 
         var firstActivity =
             await CreateActivityAsync(
@@ -94,7 +96,9 @@ public class PersonalRecordsControllerTests
     {
         await _fixture.ResetDatabaseAsync();
 
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(
+    _client,
+    _factory);
 
         await CreateActivityAsync(
             _client,
@@ -106,7 +110,9 @@ public class PersonalRecordsControllerTests
         using var secondClient =
             _factory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(
+    secondClient,
+    _factory);
 
         await CreateActivityAsync(
             secondClient,
@@ -155,7 +161,9 @@ public class PersonalRecordsControllerTests
     {
         await _fixture.ResetDatabaseAsync();
 
-        await AuthenticateAsync(_client);
+        await AuthenticateAsync(
+    _client,
+    _factory);
 
         var response =
             await _client.GetAsync(
@@ -271,7 +279,8 @@ public class PersonalRecordsControllerTests
     }
 
     private static async Task AuthenticateAsync(
-        HttpClient client)
+    HttpClient client,
+    PaceUpWebApplicationFactory factory)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
@@ -291,6 +300,29 @@ public class PersonalRecordsControllerTests
         Assert.True(
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
+
+        var fakeEmailService =
+            factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == registerRequest.Email);
+
+        Assert.NotEqual(
+    default,
+    verificationEmail);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail!.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
 
         var loginResponse =
             await client.PostAsJsonAsync(

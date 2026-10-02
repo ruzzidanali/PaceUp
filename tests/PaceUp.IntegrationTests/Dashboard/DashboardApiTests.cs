@@ -29,7 +29,9 @@ public class DashboardApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(
+            client,
+            factory);
 
         var response =
             await client.GetAsync(
@@ -78,7 +80,9 @@ public class DashboardApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(
+            client,
+            factory);
 
         await client.PostAsJsonAsync(
             "/api/activities",
@@ -139,7 +143,9 @@ public class DashboardApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(
+            client,
+            factory);
 
         for (var i = 1; i <= 7; i++)
         {
@@ -190,7 +196,9 @@ public class DashboardApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(
+            client,
+            factory);
 
         var startDate =
             DateTime.UtcNow.AddDays(-7);
@@ -269,7 +277,9 @@ public class DashboardApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(
+            client,
+            factory);
 
         await client.PostAsJsonAsync(
             "/api/goals",
@@ -325,7 +335,8 @@ public class DashboardApiTests
     }
 
     private static async Task AuthenticateAsync(
-        HttpClient client)
+        HttpClient client,
+        PaceUpWebApplicationFactory factory)
     {
         var uniqueId =
             Guid.NewGuid().ToString("N");
@@ -345,6 +356,29 @@ public class DashboardApiTests
         Assert.True(
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
+
+        var fakeEmailService =
+            factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == registerRequest.Email);
+
+        Assert.NotEqual(
+            default,
+            verificationEmail);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
 
         var loginResponse =
             await client.PostAsJsonAsync(
@@ -379,7 +413,9 @@ public class DashboardApiTests
         using var firstClient =
             factory.CreateClient();
 
-        await AuthenticateAsync(firstClient);
+        await AuthenticateAsync(
+            firstClient,
+            factory);
 
         await firstClient.PostAsJsonAsync(
             "/api/activities",
@@ -405,7 +441,9 @@ public class DashboardApiTests
         using var secondClient =
             secondFactory.CreateClient();
 
-        await AuthenticateAsync(secondClient);
+        await AuthenticateAsync(
+            secondClient,
+            secondFactory);
 
         await secondClient.PostAsJsonAsync(
             "/api/activities",

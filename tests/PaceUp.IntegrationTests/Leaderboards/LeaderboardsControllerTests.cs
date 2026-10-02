@@ -369,7 +369,7 @@ public class LeaderboardsControllerTests
             $"Activity creation failed: {response.StatusCode}");
     }
 
-    private static async Task AuthenticateAsync(
+    private async Task AuthenticateAsync(
         HttpClient client)
     {
         var uniqueId =
@@ -390,6 +390,24 @@ public class LeaderboardsControllerTests
         Assert.True(
             registerResponse.IsSuccessStatusCode,
             $"Registration failed: {registerResponse.StatusCode}");
+
+        var emailService =
+            _factory.GetFakeEmailService();
+
+        var verificationEmail =
+            emailService.SentEmailVerificationEmails
+                .Single(x => x.Email == registerRequest.Email);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+        
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}"
+        );
 
         var loginResponse =
             await client.PostAsJsonAsync(

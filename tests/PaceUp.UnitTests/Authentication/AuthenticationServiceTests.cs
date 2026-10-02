@@ -431,6 +431,14 @@ public class AuthenticationServiceTests
                 registerRequest,
                 CancellationToken.None);
 
+        var identity =
+            await db.UserIdentities
+                .SingleAsync(x => x.UserId == result.UserId);
+
+        identity.VerifyEmail();
+
+        await db.SaveChangesAsync();
+
         for (var attempt = 0; attempt < 3; attempt++)
         {
             await Assert.ThrowsAsync<UnauthorizedAccessException>(
@@ -517,6 +525,14 @@ public class AuthenticationServiceTests
         await service.RegisterAsync(
             registerRequest,
             CancellationToken.None);
+
+        var user = await db.Users
+            .Include(u => u.Identity)
+            .SingleAsync(u => u.Email == "login@example.com");
+
+        user.Identity!.VerifyEmail();
+
+        await db.SaveChangesAsync();
 
         var loginRequest = new LoginRequest(
             "login@example.com",

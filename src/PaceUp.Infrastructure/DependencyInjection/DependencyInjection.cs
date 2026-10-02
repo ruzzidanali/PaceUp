@@ -8,6 +8,8 @@ using PaceUp.Infrastructure.Authentication;
 using PaceUp.Application.Abstractions.Communication;
 using PaceUp.Infrastructure.Communication;
 using Resend;
+using Microsoft.Extensions.Options;
+using PaceUp.Infrastructure.Storage;
 
 namespace PaceUp.Infrastructure.DependencyInjection;
 
@@ -43,6 +45,24 @@ public static class DependencyInjection
         services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
 
         services.AddScoped<IEmailService, EmailService>();
+
+        services.Configure<SupabaseStorageOptions>(options =>
+        {
+            options.Url =
+                Environment.GetEnvironmentVariable("Supabase__Url")
+                ?? string.Empty;
+
+            options.ServiceRoleKey =
+                Environment.GetEnvironmentVariable("Supabase__ServiceRoleKey")
+                ?? string.Empty;
+
+            options.BucketName = "profile-images";
+        });
+
+        services.AddHttpClient<SupabaseStorageService>();
+
+        services.AddSingleton<IProfileImageStorage>(
+            provider => provider.GetRequiredService<SupabaseStorageService>());
 
         services.AddOptions();
 

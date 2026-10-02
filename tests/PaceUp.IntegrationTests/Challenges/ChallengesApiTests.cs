@@ -1086,8 +1086,8 @@ public class ChallengesApiTests
     }
 
     private async Task<string> RegisterAndLoginAsync(
-        string username,
-        string email)
+    string username,
+    string email)
     {
         var registerRequest =
             new RegisterRequest(
@@ -1104,6 +1104,29 @@ public class ChallengesApiTests
         Assert.Equal(
             HttpStatusCode.OK,
             registerResponse.StatusCode);
+
+        var fakeEmailService =
+            _fixture.Factory.GetFakeEmailService();
+
+        var verificationEmail =
+            fakeEmailService
+                .SentEmailVerificationEmails
+                .LastOrDefault(
+                    x => x.Email == email);
+
+        Assert.NotEqual(
+            default,
+            verificationEmail);
+
+        var verifyResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed: {verifyResponse.StatusCode}");
 
         var loginResponse =
             await _client.PostAsJsonAsync(

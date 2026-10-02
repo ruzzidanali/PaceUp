@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using PaceUp.Api.Extensions;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using PaceUp.Infrastructure.Storage;
 
 namespace PaceUp.Api.Controllers;
 
@@ -14,10 +15,12 @@ namespace PaceUp.Api.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IProfileImageStorage _profileImageStorage;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IProfileImageStorage profileImageStorage)
     {
         _userService = userService;
+        _profileImageStorage = profileImageStorage;
     }
 
     [HttpPost]
@@ -215,30 +218,20 @@ public class UsersController : ControllerBase
         var previousImageUrl =
             currentUser.ProfileImageUrl;
 
-        var uploadsPath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "wwwroot",
-            "uploads",
-            "profile-images");
-
-        Directory.CreateDirectory(uploadsPath);
-
         var fileName =
             $"{Guid.NewGuid():N}{extension}";
 
-        var filePath = Path.Combine(
-            uploadsPath,
-            fileName);
+        string imageUrl;
 
-        await using (var stream = System.IO.File.Create(filePath))
+        await using (var stream = file.OpenReadStream())
         {
-            await file.CopyToAsync(
+            imageUrl = await _profileImageStorage.UploadAsync(
                 stream,
-                cancellationToken);
+                fileName,
+                contentType,
+                cancellationToken
+            );
         }
-
-        var imageUrl =
-            $"{Request.Scheme}://{Request.Host}/uploads/profile-images/{fileName}";
 
         UserResponse? user;
 
@@ -248,54 +241,51 @@ public class UsersController : ControllerBase
                 await _userService.UpdateProfileImageAsync(
                     userId,
                     new UpdateProfileImageRequest(imageUrl),
-                    cancellationToken);
+                    cancellationToken
+                );
         }
         catch
         {
-            if (System.IO.File.Exists(filePath))
-            {
-                System.IO.File.Delete(filePath);
-            }
+            await _profileImageStorage.DeleteAsync(
+                fileName,
+                cancellationToken
+            );
 
             throw;
         }
 
         if (user is null)
         {
-            if (System.IO.File.Exists(filePath))
-            {
-                System.IO.File.Delete(filePath);
-            }
+            await _profileImageStorage.DeleteAsync(
+                fileName,
+                cancellationToken
+            );
 
             return NotFound();
         }
 
         if (!string.IsNullOrWhiteSpace(previousImageUrl))
         {
-            var previousFileName =
-                Path.GetFileName(
-                    new Uri(previousImageUrl).AbsolutePath);
-
-            var previousFilePath =
-                Path.Combine(
-                    uploadsPath,
-                    previousFileName);
-
-            if (System.IO.File.Exists(previousFilePath) &&
-                !string.Equals(
-                    previousFilePath,
-                    filePath,
-                    StringComparison.OrdinalIgnoreCase))
+            try
             {
-                try
+                var previousFileName =
+                    Path.GetFileName(
+                        new Uri(previousImageUrl).AbsolutePath);
+
+                if (!string.Equals(
+                    previousFileName,
+                    fileName,
+                    StringComparison.OrdinalIgnoreCase))
                 {
-                    System.IO.File.Delete(previousFilePath);
+                    await _profileImageStorage.DeleteAsync(
+                        previousFileName,
+                        cancellationToken);
                 }
-                catch
-                {
-                    // The database already points to the new image.
-                    // Keep the new image if old-file cleanup fails.
-                }
+            }
+            catch
+            {
+                // The profile update has already succeeded.
+                // Failure to remove the old image should not fail the request.
             }
         }
 

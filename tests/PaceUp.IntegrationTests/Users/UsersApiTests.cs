@@ -32,7 +32,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var request = new CreateUserRequest(
             "integration_user",
@@ -87,7 +87,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var request =
             new UpdateProfileRequest(
@@ -127,7 +127,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var request =
             new UpdateProfileRequest(
@@ -153,7 +153,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var createRequest = new CreateUserRequest(
             "get_user",
@@ -205,7 +205,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var firstRequest = new CreateUserRequest(
             "duplicate_user",
@@ -237,7 +237,8 @@ public class UsersApiTests
     }
 
     private static async Task AuthenticateAsync(
-        HttpClient client)
+        HttpClient client,
+        PaceUpWebApplicationFactory factory)
     {
         var uniqueId = Guid.NewGuid().ToString("N");
 
@@ -256,9 +257,26 @@ public class UsersApiTests
             registerResponse.IsSuccessStatusCode,
             $"Registration failed with status {registerResponse.StatusCode}.");
 
+        var emailService =
+            factory.GetFakeEmailService();
+
+        var verificationEmail =
+            emailService.SentEmailVerificationEmails
+                .Single(x => x.Email == registerRequest.Email);
+
+        var verifyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/verify-email",
+                new VerifyEmailRequest(
+                    verificationEmail.VerificationToken));
+
+        Assert.True(
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed with status {verifyResponse.StatusCode}.");
+
         var loginRequest = new LoginRequest(
-    $"test_auth_{uniqueId}@example.com",
-    "Password123!");
+            $"test_auth_{uniqueId}@example.com",
+            "Password123!");
 
         var loginResponse =
             await client.PostAsJsonAsync(
@@ -332,7 +350,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var request = new UpdateProfileRequest(
             "Updated Integration User",
@@ -371,7 +389,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         using var content = new MultipartFormDataContent();
 
@@ -400,6 +418,16 @@ public class UsersApiTests
                 "/api/users/me/profile-image",
                 content);
 
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            var errorBody =
+                await response.Content.ReadAsStringAsync();
+
+            throw new Exception(
+                $"Profile image upload failed: " +
+                $"{response.StatusCode} - {errorBody}");
+        }
+
         Assert.Equal(
             HttpStatusCode.OK,
             response.StatusCode);
@@ -411,8 +439,8 @@ public class UsersApiTests
         Assert.NotNull(user);
         Assert.NotNull(user.ProfileImageUrl);
 
-        Assert.Contains(
-            "/uploads/profile-images/",
+        Assert.StartsWith(
+            "https://fake-storage.local/profile-images/",
             user.ProfileImageUrl);
 
         Assert.EndsWith(
@@ -429,7 +457,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         using var content =
             new MultipartFormDataContent();
@@ -470,14 +498,11 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
-        var uploadsPath =
-            Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "wwwroot",
-                "uploads",
-                "profile-images");
+        var storage =
+            factory.Services
+                .GetRequiredService<FakeProfileImageStorage>();
 
         async Task<string> UploadImageAsync()
         {
@@ -530,14 +555,9 @@ public class UsersApiTests
             Path.GetFileName(
                 new Uri(firstImageUrl).AbsolutePath);
 
-        var firstFilePath =
-            Path.Combine(
-                uploadsPath,
-                firstFileName);
-
         Assert.True(
-            File.Exists(firstFilePath),
-            "The first uploaded image file should exist.");
+            storage.Files.ContainsKey(firstFileName),
+            "The first uploaded image should exist in fake storage.");
 
         var secondImageUrl =
             await UploadImageAsync();
@@ -546,27 +566,21 @@ public class UsersApiTests
             Path.GetFileName(
                 new Uri(secondImageUrl).AbsolutePath);
 
-        var secondFilePath =
-            Path.Combine(
-                uploadsPath,
-                secondFileName);
-
         Assert.NotEqual(
             firstImageUrl,
             secondImageUrl);
 
         Assert.True(
-            File.Exists(secondFilePath),
-            "The second uploaded image file should exist.");
+            storage.Files.ContainsKey(secondFileName),
+            "The second uploaded image should exist in fake storage.");
 
         Assert.False(
-            File.Exists(firstFilePath),
-            "The previous profile image file should have been deleted.");
+            storage.Files.ContainsKey(firstFileName),
+            "The previous profile image should have been deleted.");
 
-        if (File.Exists(secondFilePath))
-        {
-            File.Delete(secondFilePath);
-        }
+        Assert.Contains(
+            firstFileName,
+            storage.DeletedFiles);
     }
 
     [Fact]
@@ -619,7 +633,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var meResponse =
             await client.GetAsync("/api/users/me");
@@ -679,7 +693,7 @@ public class UsersApiTests
         using var client =
             factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var meResponse =
             await client.GetAsync(
@@ -775,7 +789,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var targetRequest = new CreateUserRequest(
             $"follow_target_{Guid.NewGuid():N}",
@@ -815,7 +829,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var meResponse =
             await client.GetAsync("/api/users/me");
@@ -904,7 +918,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var targetRequest = new CreateUserRequest(
             $"unfollow_target_{Guid.NewGuid():N}",
@@ -970,7 +984,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var response =
             await client.PostAsync(
@@ -990,7 +1004,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var targetRequest = new CreateUserRequest(
             $"not_following_{Guid.NewGuid():N}",
@@ -1029,7 +1043,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var meResponse =
             await client.GetAsync("/api/users/me");
@@ -1062,7 +1076,7 @@ public class UsersApiTests
 
         using var client = factory.CreateClient();
 
-        await AuthenticateAsync(client);
+        await AuthenticateAsync(client, factory);
 
         var targetRequest = new CreateUserRequest(
             $"duplicate_follow_{Guid.NewGuid():N}",
