@@ -47,10 +47,14 @@ public interface IUserService
         CancellationToken cancellationToken);
 
     Task<FollowListResponse?> GetFollowersAsync(
-        Guid userId,
-        CancellationToken cancellationToken);
+    Guid userId,
+    int page,
+    int pageSize,
+    CancellationToken cancellationToken);
 
     Task<FollowListResponse?> GetFollowingAsync(
         Guid userId,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken);
 }

@@ -4,7 +4,7 @@ namespace PaceUp.Application.Abstractions.Authentication;
 
 public interface IAuthenticationService
 {
-    Task<AuthResponse> RegisterAsync(
+    Task<RegistrationResponse> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken);
 
@@ -30,7 +30,7 @@ public interface IAuthenticationService
         CancellationToken cancellationToken);
 
     Task ResendVerificationAsync(
-        Guid userId,
+        string email,
         CancellationToken cancellationToken);
 
     Task<RefreshTokenResponse> RefreshAsync(

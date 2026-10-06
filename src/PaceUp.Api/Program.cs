@@ -14,8 +14,14 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using PaceUp.Api.Health;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
+});
 
 builder.Services
     .AddOptions<JwtOptions>()
@@ -149,6 +155,17 @@ using (var scope = app.Services.CreateScope())
 app.UseExceptionHandler();
 
 app.UseForwardedHeaders();
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] =
+        "camera=(), microphone=(), geolocation=()";
+
+    await next();
+});
 
 if (app.Environment.IsDevelopment())
 {

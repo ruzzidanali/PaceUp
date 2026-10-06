@@ -911,6 +911,170 @@ public class UsersApiTests
     }
 
     [Fact]
+    public async Task GetFollowers_ShouldDefaultToFirstPageOfTwenty()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(_database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client, factory);
+
+        var targetRequest = new CreateUserRequest(
+            $"followers_default_{Guid.NewGuid():N}",
+            $"followers_default_{Guid.NewGuid():N}@example.com",
+            "Followers Default");
+
+        var targetResponse =
+            await client.PostAsJsonAsync(
+                "/api/users",
+                targetRequest);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            targetResponse.StatusCode);
+
+        var target =
+            await targetResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(target);
+
+        var response =
+            await client.GetAsync(
+                $"/api/users/{target.Id}/followers");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<FollowListResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Equal(1, result.Page);
+        Assert.Equal(20, result.PageSize);
+        Assert.Empty(result.Users);
+        Assert.Equal(0, result.TotalCount);
+        Assert.False(result.HasMore);
+    }
+
+    [Fact]
+    public async Task GetFollowers_ShouldRejectInvalidPage()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(_database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client, factory);
+
+        var meResponse =
+            await client.GetAsync("/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            meResponse.StatusCode);
+
+        var me =
+            await meResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(me);
+
+        var response =
+            await client.GetAsync(
+                $"/api/users/{me.Id}/followers?page=0");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetFollowers_ShouldRejectInvalidPageSize()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(_database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client, factory);
+
+        var meResponse =
+            await client.GetAsync("/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            meResponse.StatusCode);
+
+        var me =
+            await meResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(me);
+
+        var zeroResponse =
+            await client.GetAsync(
+                $"/api/users/{me.Id}/followers?pageSize=0");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            zeroResponse.StatusCode);
+
+        var tooLargeResponse =
+            await client.GetAsync(
+                $"/api/users/{me.Id}/followers?pageSize=51");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            tooLargeResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetFollowers_ShouldAcceptMaximumPageSize()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(_database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client, factory);
+
+        var meResponse =
+            await client.GetAsync("/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            meResponse.StatusCode);
+
+        var me =
+            await meResponse.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(me);
+
+        var response =
+            await client.GetAsync(
+                $"/api/users/{me.Id}/followers?page=1&pageSize=50");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<FollowListResponse>();
+
+        Assert.NotNull(result);
+
+        Assert.Equal(1, result.Page);
+        Assert.Equal(50, result.PageSize);
+    }
+
+    [Fact]
     public async Task UnfollowUser_ShouldReturnNoContent()
     {
         await using var factory =

@@ -118,6 +118,26 @@ public class FakeEmailService : IEmailService
     }
 }
 
+public class FailingEmailService : IEmailService
+{
+    public Task SendPasswordResetEmailAsync(
+        string email,
+        string resetToken,
+        CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task SendEmailVerificationAsync(
+        string email,
+        string verificationToken,
+        CancellationToken cancellationToken)
+    {
+        throw new InvalidOperationException(
+            "Email provider failed.");
+    }
+}
+
 public class AuthenticationServiceTests
 {
     [Fact]
@@ -186,11 +206,19 @@ public class AuthenticationServiceTests
             user.Email);
 
         Assert.Equal(
-    "test-access-token",
-    result.AccessToken);
+            "ruzzidan",
+            result.Username);
+
+        Assert.Equal(
+            "ruzzidan@example.com",
+            result.Email);
+
+        Assert.Equal(
+            "Ruzzidan",
+            result.DisplayName);
 
         Assert.True(
-            result.ExpiresAt > DateTime.UtcNow);
+            result.EmailVerificationRequired);
 
         Assert.NotEqual(
             request.Password,
@@ -200,6 +228,64 @@ public class AuthenticationServiceTests
             passwordHasher.Verify(
                 request.Password,
                 identity.PasswordHash));
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenEmailSendingFails_ShouldRemoveCreatedRecords()
+    {
+        await using var db =
+            CreateDatabase();
+
+        var passwordHasher =
+            new Argon2PasswordHasher();
+
+        var tokenService =
+            new FakeJwtTokenService();
+
+        var emailVerificationTokenService =
+            new FakeEmailVerificationTokenService(
+                "test-verification-token");
+
+        var passwordResetTokenService =
+            new FakePasswordResetTokenService(
+                "test-password-reset-token");
+
+        var refreshTokenService =
+            new FakeRefreshTokenService(
+                "test-refresh-token");
+
+        var emailService =
+            new FailingEmailService();
+
+        var service =
+            new AuthenticationService(
+                db,
+                passwordHasher,
+                tokenService,
+                emailVerificationTokenService,
+                passwordResetTokenService,
+                refreshTokenService,
+                emailService);
+
+        var request = new RegisterRequest(
+            "failed-email-user",
+            "failed-email@example.com",
+            "Failed Email User",
+            "Password123!");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RegisterAsync(
+                request,
+                CancellationToken.None));
+
+        Assert.Empty(
+            await db.Users.ToListAsync());
+
+        Assert.Empty(
+            await db.UserIdentities.ToListAsync());
+
+        Assert.Empty(
+            await db.EmailVerificationTokens.ToListAsync());
     }
 
     [Fact]
@@ -1528,7 +1614,7 @@ public class AuthenticationServiceTests
         await db.SaveChangesAsync();
 
         await service.ResendVerificationAsync(
-            user.Id,
+            user.Email,
             CancellationToken.None);
 
         var token =
@@ -1604,7 +1690,7 @@ public class AuthenticationServiceTests
         await db.SaveChangesAsync();
 
         await service.ResendVerificationAsync(
-            user.Id,
+            user.Email,
             CancellationToken.None);
 
         Assert.True(existingToken.IsExpired());
@@ -1631,7 +1717,7 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
-    public async Task ResendVerificationAsync_WhenEmailAlreadyVerified_ShouldThrowConflict()
+    public async Task ResendVerificationAsync_WhenEmailAlreadyVerified_ShouldDoNothing()
     {
         await using var db =
             CreateDatabase();
@@ -1684,14 +1770,13 @@ public class AuthenticationServiceTests
 
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => service.ResendVerificationAsync(
-                user.Id,
-                CancellationToken.None));
+        await service.ResendVerificationAsync(
+            user.Email,
+            CancellationToken.None);
     }
 
     [Fact]
-    public async Task ResendVerificationAsync_WhenUserDoesNotExist_ShouldThrowUnauthorized()
+    public async Task ResendVerificationAsync_WhenUserDoesNotExist_ShouldDoNothing()
     {
         await using var db =
             CreateDatabase();
@@ -1712,7 +1797,7 @@ public class AuthenticationServiceTests
 
         var refreshTokenService =
             new FakeRefreshTokenService(
-            "test-refresh-token");
+                "test-refresh-token");
 
         var emailService = new FakeEmailService();
 
@@ -1726,9 +1811,8 @@ public class AuthenticationServiceTests
                 refreshTokenService,
                 emailService);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => service.ResendVerificationAsync(
-                Guid.NewGuid(),
-                CancellationToken.None));
+        await service.ResendVerificationAsync(
+            "does-not-exist@example.com",
+            CancellationToken.None);
     }
 }

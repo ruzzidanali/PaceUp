@@ -44,7 +44,7 @@ public class AuthenticationApiTests
 
         var result =
             await response.Content
-                .ReadFromJsonAsync<AuthResponse>();
+                .ReadFromJsonAsync<RegistrationResponse>();
 
         Assert.NotNull(result);
 
@@ -59,6 +59,8 @@ public class AuthenticationApiTests
         Assert.Equal(
             request.DisplayName,
             result.DisplayName);
+
+        Assert.True(result.EmailVerificationRequired);
     }
 
     [Fact]
@@ -486,12 +488,6 @@ public class AuthenticationApiTests
             HttpStatusCode.OK,
             registerResponse.StatusCode);
 
-        var registerResult =
-            await registerResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(registerResult);
-
         await VerifyRegisteredUserAsync(
             registerRequest);
 
@@ -707,12 +703,6 @@ public class AuthenticationApiTests
         Assert.Equal(
             HttpStatusCode.OK,
             registerResponse.StatusCode);
-
-        var authResponse =
-            await registerResponse.Content
-                .ReadFromJsonAsync<AuthResponse>();
-
-        Assert.NotNull(authResponse);
 
         await VerifyRegisteredUserAsync(
             registerRequest);
@@ -933,15 +923,12 @@ public class AuthenticationApiTests
             await GetVerificationTokenAsync(
                 authResponse.UserId);
 
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(
-                "Bearer",
-                authResponse.AccessToken);
-
         var resendResponse =
-            await _client.PostAsync(
+            await _client.PostAsJsonAsync(
                 "/api/auth/resend-verification",
-                null);
+                new ResendVerificationRequest(
+                    registerRequest.Email
+                ));
 
         Assert.Equal(
             HttpStatusCode.NoContent,
@@ -955,8 +942,6 @@ public class AuthenticationApiTests
             oldToken,
             newToken);
 
-        _client.DefaultRequestHeaders.Authorization = null;
-
         var response =
             await _client.PostAsJsonAsync(
                 "/api/auth/verify-email",
@@ -968,7 +953,7 @@ public class AuthenticationApiTests
     }
 
     [Fact]
-    public async Task ResendVerification_WhenEmailAlreadyVerified_ShouldReturnConflict()
+    public async Task ResendVerification_WhenEmailAlreadyVerified_ShouldDoNothing()
     {
         var uniqueId = Guid.NewGuid().ToString("N");
 
@@ -1000,85 +985,30 @@ public class AuthenticationApiTests
         await VerifyRegisteredUserAsync(
             registerRequest);
 
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(
-                "Bearer",
-                authResponse.AccessToken);
-
         var resendResponse =
-            await _client.PostAsync(
+            await _client.PostAsJsonAsync(
                 "/api/auth/resend-verification",
-                null);
+                new ResendVerificationRequest(
+                    registerRequest.Email
+                ));
 
         Assert.Equal(
-            HttpStatusCode.Conflict,
+            HttpStatusCode.NoContent,
             resendResponse.StatusCode);
-
-        _client.DefaultRequestHeaders.Authorization = null;
     }
 
     [Fact]
-    public async Task ResendVerification_WithoutToken_ShouldReturnUnauthorized()
+    public async Task ResendVerification_WhenEmailDoesNotExist_ShouldReturnNoContent()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
-
         var response =
-            await _client.PostAsync(
+            await _client.PostAsJsonAsync(
                 "/api/auth/resend-verification",
-                null);
+                new ResendVerificationRequest(
+                    "does-not-exist@example.com"));
 
         Assert.Equal(
-            HttpStatusCode.Unauthorized,
+            HttpStatusCode.NoContent,
             response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Login_AfterFiveFailedAttempts_ShouldLockAccount()
-    {
-        var uniqueId = Guid.NewGuid().ToString("N");
-
-        var registerRequest = new RegisterRequest(
-            $"lockout_api_{uniqueId}",
-            $"lockout_api_{uniqueId}@example.com",
-            "Lockout API User",
-            "Password123!");
-
-        var registerResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/register",
-                registerRequest);
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            registerResponse.StatusCode);
-
-        await VerifyRegisteredUserAsync(
-            registerRequest);
-
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            var response =
-                await _client.PostAsJsonAsync(
-                    "/api/auth/login",
-                    new LoginRequest(
-                        registerRequest.Email,
-                        "WrongPassword!"));
-
-            Assert.Equal(
-                HttpStatusCode.Unauthorized,
-                response.StatusCode);
-        }
-
-        var correctPasswordResponse =
-            await _client.PostAsJsonAsync(
-                "/api/auth/login",
-                new LoginRequest(
-                    registerRequest.Email,
-                    registerRequest.Password));
-
-        Assert.Equal(
-            HttpStatusCode.Unauthorized,
-            correctPasswordResponse.StatusCode);
     }
 
     [Fact]

@@ -365,16 +365,26 @@ public class UsersController : ControllerBase
     [AllowAnonymous]
     [HttpGet("{id:guid}/followers")]
     [ProducesResponseType(
-        typeof(FollowListResponse),
-        StatusCodes.Status200OK)]
+    typeof(FollowListResponse),
+    StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FollowListResponse>> GetFollowers(
-        Guid id,
-        CancellationToken cancellationToken)
+    Guid id,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken cancellationToken = default)
     {
+        if (page < 1 || pageSize < 1 || pageSize > 50)
+        {
+            return BadRequest(
+                "Page must be at least 1 and pageSize must be between 1 and 50.");
+        }
+
         var result =
             await _userService.GetFollowersAsync(
                 id,
+                page,
+                pageSize,
                 cancellationToken);
 
         if (result is null)
@@ -388,16 +398,26 @@ public class UsersController : ControllerBase
     [AllowAnonymous]
     [HttpGet("{id:guid}/following")]
     [ProducesResponseType(
-        typeof(FollowListResponse),
-        StatusCodes.Status200OK)]
+    typeof(FollowListResponse),
+    StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FollowListResponse>> GetFollowing(
-        Guid id,
-        CancellationToken cancellationToken)
+    Guid id,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken cancellationToken = default)
     {
+        if (page < 1 || pageSize < 1 || pageSize > 50)
+        {
+            return BadRequest(
+                "Page must be at least 1 and pageSize must be between 1 and 50.");
+        }
+
         var result =
             await _userService.GetFollowingAsync(
                 id,
+                page,
+                pageSize,
                 cancellationToken);
 
         if (result is null)

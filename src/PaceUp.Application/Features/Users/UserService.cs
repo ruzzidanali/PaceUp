@@ -261,8 +261,10 @@ public class UserService : IUserService
     }
 
     public async Task<FollowListResponse?> GetFollowersAsync(
-        Guid userId,
-        CancellationToken cancellationToken)
+    Guid userId,
+    int page,
+    int pageSize,
+    CancellationToken cancellationToken)
     {
         var userExists =
             await _dbContext.Users
@@ -275,16 +277,20 @@ public class UserService : IUserService
             return null;
         }
 
-        var follows =
-            await _dbContext.Follows
+        var query =
+            _dbContext.Follows
                 .AsNoTracking()
-                .Where(x => x.FollowingId == userId)
-                .Include(x => x.Follower)
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync(cancellationToken);
+                .Where(x => x.FollowingId == userId);
+
+        var totalCount =
+            await query.CountAsync(cancellationToken);
 
         var users =
-            follows
+            await query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(
                     x =>
                         new FollowResponse(
@@ -293,15 +299,20 @@ public class UserService : IUserService
                             x.Follower.DisplayName,
                             x.Follower.ProfileImageUrl,
                             x.CreatedAt))
-                .ToList();
+                .ToListAsync(cancellationToken);
 
         return new FollowListResponse(
             users,
-            users.Count);
+            totalCount,
+            page,
+            pageSize,
+            (page * pageSize) < totalCount);
     }
 
     public async Task<FollowListResponse?> GetFollowingAsync(
         Guid userId,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken)
     {
         var userExists =
@@ -315,16 +326,20 @@ public class UserService : IUserService
             return null;
         }
 
-        var follows =
-            await _dbContext.Follows
+        var query =
+            _dbContext.Follows
                 .AsNoTracking()
-                .Where(x => x.FollowerId == userId)
-                .Include(x => x.Following)
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync(cancellationToken);
+                .Where(x => x.FollowerId == userId);
+
+        var totalCount =
+            await query.CountAsync(cancellationToken);
 
         var users =
-            follows
+            await query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(
                     x =>
                         new FollowResponse(
@@ -333,11 +348,14 @@ public class UserService : IUserService
                             x.Following.DisplayName,
                             x.Following.ProfileImageUrl,
                             x.CreatedAt))
-                .ToList();
+                .ToListAsync(cancellationToken);
 
         return new FollowListResponse(
             users,
-            users.Count);
+            totalCount,
+            page,
+            pageSize,
+            (page * pageSize) < totalCount);
     }
 
     public async Task<IReadOnlyList<UserSearchResponse>> SearchAsync(

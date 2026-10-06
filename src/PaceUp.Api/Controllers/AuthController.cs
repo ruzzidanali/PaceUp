@@ -20,7 +20,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [EnableRateLimiting("auth")]
-    public async Task<ActionResult<AuthResponse>> Register(
+    public async Task<ActionResult<RegistrationResponse>> Register(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
@@ -130,18 +130,17 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
+    [EnableRateLimiting("auth")]
     [HttpPost("resend-verification")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ResendVerification(
+    [FromBody] ResendVerificationRequest request,
     CancellationToken cancellationToken)
     {
-        var userId = User.GetUserId();
-
         await _authenticationService.ResendVerificationAsync(
-            userId,
+            request.Email,
             cancellationToken);
 
         return NoContent();

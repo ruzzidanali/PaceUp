@@ -36,7 +36,7 @@ public class AuthenticationService : IAuthenticationService
         _emailService = emailService;
     }
 
-    public async Task<AuthResponse> RegisterAsync(
+    public async Task<RegistrationResponse> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken)
     {
@@ -91,31 +91,36 @@ public class AuthenticationService : IAuthenticationService
         await _dbContext.SaveChangesAsync(
             cancellationToken);
 
-        await _emailService.SendEmailVerificationAsync(
-            user.Email,
-            verificationToken,
-            cancellationToken);
+        try
+        {
+            await _emailService.SendEmailVerificationAsync(
+                user.Email,
+                verificationToken,
+                cancellationToken);
+        }
+        catch
+        {
+            _dbContext.EmailVerificationTokens.Remove(
+                emailVerificationToken);
 
-        var accessToken =
-            _jwtTokenService.GenerateAccessToken(
-                user.Id,
-                user.Username,
-                user.Email);
+            _dbContext.UserIdentities.Remove(
+                identity);
 
-        var refreshToken =
-            await _refreshTokenService.CreateAsync(
-                user.Id,
-                cancellationToken
-            );
+            _dbContext.Users.Remove(
+                user);
 
-        return new AuthResponse(
+            await _dbContext.SaveChangesAsync(
+                CancellationToken.None);
+
+            throw;
+        }
+
+        return new RegistrationResponse(
             user.Id,
             user.Username,
             user.Email,
             user.DisplayName,
-            accessToken,
-            refreshToken,
-            _jwtTokenService.GetAccessTokenExpiration());
+            true);
     }
 
     public async Task<AuthResponse> LoginAsync(
@@ -245,35 +250,32 @@ public class AuthenticationService : IAuthenticationService
     }
 
     public async Task ResendVerificationAsync(
-    Guid userId,
+    string email,
     CancellationToken cancellationToken)
     {
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(
-                x => x.Id == userId,
+                x => x.Email == email,
                 cancellationToken);
 
         if (user is null)
         {
-            throw new UnauthorizedAccessException(
-                "Unable to resend email verification.");
+            return;
         }
 
         var identity = await _dbContext.UserIdentities
             .FirstOrDefaultAsync(
-                x => x.UserId == userId,
+                x => x.UserId == user.Id,
                 cancellationToken);
 
         if (identity is null)
         {
-            throw new UnauthorizedAccessException(
-                "Unable to resend email verification.");
+            return;
         }
 
         if (identity.EmailVerified)
         {
-            throw new ConflictException(
-                "Email is already verified.");
+            return;
         }
 
         var now = DateTime.UtcNow;
@@ -282,7 +284,7 @@ public class AuthenticationService : IAuthenticationService
             await _dbContext.EmailVerificationTokens
                 .Where(
                     x =>
-                        x.UserId == userId &&
+                        x.UserId == user.Id &&
                         x.ExpiresAt > now &&
                         x.UsedAt == null)
                 .ToListAsync(
@@ -298,7 +300,7 @@ public class AuthenticationService : IAuthenticationService
 
         var verificationToken =
             new EmailVerificationToken(
-                userId,
+                user.Id,
                 TokenHashing.Hash(token),
                 DateTime.UtcNow.AddHours(24));
 

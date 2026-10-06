@@ -636,6 +636,8 @@ public class UserServiceTests
 
         var result = await service.GetFollowersAsync(
             target.Id,
+            1,
+            20,
             CancellationToken.None);
 
         Assert.NotNull(result);
@@ -690,6 +692,8 @@ public class UserServiceTests
 
         var result = await service.GetFollowingAsync(
             follower.Id,
+            1,
+            20,
             CancellationToken.None);
 
         Assert.NotNull(result);
@@ -702,6 +706,222 @@ public class UserServiceTests
         Assert.Contains(
             result.Users,
             x => x.UserId == following2.Id);
+    }
+
+    [Fact]
+    public async Task GetFollowingAsync_ShouldPaginateResults()
+    {
+        await using var db = CreateDatabase();
+
+        var follower = new User(
+            "pagination-follower",
+            "pagination-follower@example.com",
+            "Pagination Follower");
+
+        var followingUsers = Enumerable
+            .Range(1, 5)
+            .Select(
+                i =>
+                    new User(
+                        $"pagination-following{i}",
+                        $"pagination-following{i}@example.com",
+                        $"Pagination Following {i}"))
+            .ToList();
+
+        db.Users.Add(follower);
+        db.Users.AddRange(followingUsers);
+
+        await db.SaveChangesAsync();
+
+        foreach (var following in followingUsers)
+        {
+            db.Follows.Add(
+                new Follow(
+                    follower.Id,
+                    following.Id));
+        }
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new UserService(
+                db,
+                new FakeNotificationService());
+
+        var page1 =
+            await service.GetFollowingAsync(
+                follower.Id,
+                1,
+                2,
+                CancellationToken.None);
+
+        var page2 =
+            await service.GetFollowingAsync(
+                follower.Id,
+                2,
+                2,
+                CancellationToken.None);
+
+        Assert.NotNull(page1);
+        Assert.NotNull(page2);
+
+        Assert.Equal(5, page1.TotalCount);
+        Assert.Equal(5, page2.TotalCount);
+
+        Assert.Equal(1, page1.Page);
+        Assert.Equal(2, page2.Page);
+
+        Assert.Equal(2, page1.PageSize);
+        Assert.Equal(2, page2.PageSize);
+
+        Assert.Equal(2, page1.Users.Count);
+        Assert.Equal(2, page2.Users.Count);
+
+        Assert.True(page1.HasMore);
+        Assert.True(page2.HasMore);
+
+        Assert.Empty(
+            page1.Users
+                .Select(x => x.UserId)
+                .Intersect(
+                    page2.Users.Select(x => x.UserId)));
+    }
+
+    [Fact]
+    public async Task GetFollowersAsync_ShouldPaginateResults()
+    {
+        await using var db = CreateDatabase();
+
+        var target = new User(
+            "pagination-target",
+            "pagination-target@example.com",
+            "Pagination Target");
+
+        var followers = Enumerable
+            .Range(1, 5)
+            .Select(
+                i =>
+                    new User(
+                        $"pagination-follower{i}",
+                        $"pagination-follower{i}@example.com",
+                        $"Pagination Follower {i}"))
+            .ToList();
+
+        db.Users.Add(target);
+        db.Users.AddRange(followers);
+
+        await db.SaveChangesAsync();
+
+        foreach (var follower in followers)
+        {
+            db.Follows.Add(
+                new Follow(
+                    follower.Id,
+                    target.Id));
+        }
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new UserService(
+                db,
+                new FakeNotificationService());
+
+        var page1 =
+            await service.GetFollowersAsync(
+                target.Id,
+                1,
+                2,
+                CancellationToken.None);
+
+        var page2 =
+            await service.GetFollowersAsync(
+                target.Id,
+                2,
+                2,
+                CancellationToken.None);
+
+        Assert.NotNull(page1);
+        Assert.NotNull(page2);
+
+        Assert.Equal(5, page1.TotalCount);
+        Assert.Equal(5, page2.TotalCount);
+
+        Assert.Equal(1, page1.Page);
+        Assert.Equal(2, page2.Page);
+
+        Assert.Equal(2, page1.PageSize);
+        Assert.Equal(2, page2.PageSize);
+
+        Assert.Equal(2, page1.Users.Count);
+        Assert.Equal(2, page2.Users.Count);
+
+        Assert.True(page1.HasMore);
+        Assert.True(page2.HasMore);
+
+        Assert.Empty(
+            page1.Users
+                .Select(x => x.UserId)
+                .Intersect(
+                    page2.Users.Select(x => x.UserId)));
+    }
+
+    [Fact]
+    public async Task GetFollowersAsync_LastPage_ShouldSetHasMoreFalse()
+    {
+        await using var db = CreateDatabase();
+
+        var target = new User(
+            "last-page-target",
+            "last-page-target@example.com",
+            "Last Page Target");
+
+        var followers = Enumerable
+            .Range(1, 5)
+            .Select(
+                i =>
+                    new User(
+                        $"last-page-follower{i}",
+                        $"last-page-follower{i}@example.com",
+                        $"Last Page Follower {i}"))
+            .ToList();
+
+        db.Users.Add(target);
+        db.Users.AddRange(followers);
+
+        await db.SaveChangesAsync();
+
+        foreach (var follower in followers)
+        {
+            db.Follows.Add(
+                new Follow(
+                    follower.Id,
+                    target.Id));
+        }
+
+        await db.SaveChangesAsync();
+
+        var service =
+            new UserService(
+                db,
+                new FakeNotificationService());
+
+        var result =
+            await service.GetFollowersAsync(
+                target.Id,
+                3,
+                2,
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+
+        Assert.Equal(5, result.TotalCount);
+        Assert.Equal(3, result.Page);
+        Assert.Equal(2, result.PageSize);
+
+        Assert.Single(result.Users);
+
+        Assert.False(result.HasMore);
     }
 
     private sealed class FakeNotificationService
