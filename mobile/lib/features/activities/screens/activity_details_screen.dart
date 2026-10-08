@@ -826,7 +826,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.example.mobile',
+            userAgentPackageName: 'com.ruzzidanali.paceup',
           ),
           PolylineLayer(
             polylines: [

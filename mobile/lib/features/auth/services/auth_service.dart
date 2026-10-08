@@ -45,7 +45,7 @@ class AuthService {
     return authResponse;
   }
 
-  Future<AuthResponse> register(RegisterRequest request) async {
+  Future<RegistrationResponse> register(RegisterRequest request) async {
     final response = await _apiClient.post(
       '/auth/register',
       body: request.toJson(),
@@ -57,16 +57,9 @@ class AuthService {
       );
     }
 
-    final authResponse = AuthResponse.fromJson(
+    return RegistrationResponse.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
-
-    await _tokenStorage.saveTokens(
-      accessToken: authResponse.accessToken,
-      refreshToken: authResponse.refreshToken,
-    );
-
-    return authResponse;
   }
 
   Future<void> verifyEmail({required String token}) async {

@@ -30,6 +30,32 @@ class AuthResponse {
   }
 }
 
+class RegistrationResponse {
+  final String userId;
+  final String username;
+  final String email;
+  final String displayName;
+  final bool emailVerificationRequired;
+
+  const RegistrationResponse({
+    required this.userId,
+    required this.username,
+    required this.email,
+    required this.displayName,
+    required this.emailVerificationRequired,
+  });
+
+  factory RegistrationResponse.fromJson(Map<String, dynamic> json) {
+    return RegistrationResponse(
+      userId: json['userId'] as String,
+      username: json['username'] as String,
+      email: json['email'] as String,
+      displayName: json['displayName'] as String,
+      emailVerificationRequired: json['emailVerificationRequired'] as bool,
+    );
+  }
+}
+
 class LoginRequest {
   final String email;
   final String password;

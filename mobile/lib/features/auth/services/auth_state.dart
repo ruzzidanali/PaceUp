@@ -73,14 +73,14 @@ class AuthController {
     }
   }
 
-  Future<UserModel> register({
+  Future<RegistrationResponse> register({
     required String username,
     required String email,
     required String displayName,
     required String password,
   }) async {
     try {
-      await _authService.register(
+      final response = await _authService.register(
         RegisterRequest(
           username: username,
           email: email,
@@ -89,11 +89,9 @@ class AuthController {
         ),
       );
 
-      final user = await _authService.getCurrentUser();
+      _state = const AuthState.unauthenticated();
 
-      _state = AuthState.authenticated(user);
-
-      return user;
+      return response;
     } catch (e) {
       _state = AuthState.unauthenticated(e.toString());
 
