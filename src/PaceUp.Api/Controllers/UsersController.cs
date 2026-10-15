@@ -88,11 +88,11 @@ public class UsersController : ControllerBase
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType(
-        typeof(UserResponse),
+        typeof(PublicUserResponse),
         StatusCodes.Status200OK)]
     [ProducesResponseType(
         StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserResponse>> GetById(
+    public async Task<ActionResult<PublicUserResponse>> GetById(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -115,7 +115,7 @@ public class UsersController : ControllerBase
         var userId = User.GetUserId();
 
         var user =
-            await _userService.GetByIdAsync(
+            await _userService.GetMeAsync(
                 userId,
                 cancellationToken);
 
@@ -206,7 +206,7 @@ public class UsersController : ControllerBase
         }
 
         var currentUser =
-            await _userService.GetByIdAsync(
+            await _userService.GetMeAsync(
                 userId,
                 cancellationToken);
 

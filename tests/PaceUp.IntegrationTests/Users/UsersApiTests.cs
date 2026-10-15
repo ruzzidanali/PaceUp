@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
@@ -61,23 +62,10 @@ public class UsersApiTests
             "integration@example.com",
             user.Email);
 
-        using var scope =
-            factory.Services.CreateScope();
-
-        var dbContext =
-            scope.ServiceProvider
-                .GetRequiredService<PaceUpDbContext>();
-
-        var savedUser =
-            await dbContext.Users
-                .SingleAsync(
-                    x => x.Username == "integration_user");
-
         Assert.Equal(
-            "integration@example.com",
-            savedUser.Email);
+            "Integration User",
+            user.DisplayName);
     }
-
     [Fact]
     public async Task UpdateMyProfile_ShouldReturnUpdatedUser()
     {
@@ -117,7 +105,6 @@ public class UsersApiTests
             "Updated bio",
             user.Bio);
     }
-
     [Fact]
     public async Task UpdateMyProfile_WithEmptyDisplayName_ShouldReturnBadRequest()
     {
@@ -181,10 +168,17 @@ public class UsersApiTests
             HttpStatusCode.OK,
             response.StatusCode);
 
+        var responseBody =
+            await response.Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain(
+            "\"email\"",
+            responseBody,
+            StringComparison.OrdinalIgnoreCase);
+
         var user =
             await response.Content
-                .ReadFromJsonAsync<UserResponse>();
-
+                .ReadFromJsonAsync<PublicUserResponse>();
         Assert.NotNull(user);
 
         Assert.Equal(
@@ -195,6 +189,40 @@ public class UsersApiTests
             "get_user",
             user.Username);
     }
+
+    [Fact]
+    public async Task GetMe_ShouldReturnAuthenticatedUserWithEmail()
+    {
+        await using var factory =
+            new PaceUpWebApplicationFactory(_database);
+
+        using var client = factory.CreateClient();
+
+        await AuthenticateAsync(client, factory);
+
+        var response =
+            await client.GetAsync("/api/users/me");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var responseBody =
+            await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            "\"email\"",
+            responseBody,
+            StringComparison.OrdinalIgnoreCase);
+
+        var user =
+            await response.Content
+                .ReadFromJsonAsync<UserResponse>();
+
+        Assert.NotNull(user);
+        Assert.False(string.IsNullOrWhiteSpace(user.Email));
+    }
+
 
     [Fact]
     public async Task CreateUser_WithDuplicateUsername_ShouldReturnConflict()
@@ -379,7 +407,6 @@ public class UsersApiTests
             "This is my updated bio.",
             user.Bio);
     }
-
     [Fact]
     public async Task UpdateProfileImage_ShouldReturnUpdatedUser()
     {

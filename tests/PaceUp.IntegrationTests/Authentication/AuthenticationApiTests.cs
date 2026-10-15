@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using PaceUp.Application.DTOs.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 using PaceUp.Infrastructure.Persistence;
 using PaceUp.Application.Features.Authentication;
 
@@ -61,6 +62,56 @@ public class AuthenticationApiTests
             result.DisplayName);
 
         Assert.True(result.EmailVerificationRequired);
+    }
+
+    [Fact]
+    public async Task Register_WhenVerificationEmailFails_ShouldReturn503AndCleanUpUser()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var request = new RegisterRequest(
+            $"email_failure_{uniqueId}",
+            $"email_failure_{uniqueId}@example.com",
+            "Email Failure User",
+            "Password123!");
+
+        _fixture.Factory.GetFakeEmailService().ShouldFailVerificationEmail = true;
+
+        try
+        {
+            var response = await _client.PostAsJsonAsync(
+                "/api/auth/register",
+                request);
+
+            Assert.Equal(
+                HttpStatusCode.ServiceUnavailable,
+                response.StatusCode);
+
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+
+            Assert.NotNull(problem);
+            Assert.Equal(503, problem.Status);
+            Assert.Equal(
+                "We could not send the email right now. Please try again later.",
+                problem.Detail);
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+
+            var dbContext = scope.ServiceProvider
+                .GetRequiredService<PaceUpDbContext>();
+
+            Assert.False(await dbContext.Users.AnyAsync(x => x.Email == request.Email));
+
+            Assert.False(await dbContext.UserIdentities
+                .AnyAsync(x => x.User.Email == request.Email));
+
+            Assert.False(await dbContext.EmailVerificationTokens
+                .AnyAsync(x => x.User.Email == request.Email));
+        }
+        finally
+        {
+            _fixture.Factory.GetFakeEmailService().ShouldFailVerificationEmail = false;
+        }
     }
 
     [Fact]
@@ -498,9 +549,13 @@ public class AuthenticationApiTests
                     registerRequest.Email,
                     registerRequest.Password));
 
-        Assert.Equal(
-            HttpStatusCode.OK,
-            loginResponse.StatusCode);
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+
+        Assert.True(
+            loginResponse.StatusCode == HttpStatusCode.OK,
+            $"Login failed with {(int)loginResponse.StatusCode} " +
+            $"{loginResponse.StatusCode}. Response body: {loginBody}"
+        );
 
         var loginResult =
             await loginResponse.Content
@@ -1174,4 +1229,48 @@ public class AuthenticationApiTests
             refreshResponse.StatusCode);
     }
 
+
+    [Fact]
+    public async Task ChangePassword_ShouldRevokeExistingRefreshTokens()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var registerRequest = new RegisterRequest(
+            $"pwdrev_{uniqueId}",
+            $"pwdrev_{uniqueId}@example.com",
+            "Password Revocation Test",
+            "OldPassword123!"
+        );
+
+        var authResponse =
+            await RegisterVerifyAndLoginAsync(registerRequest);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                authResponse.AccessToken);
+
+        var changeResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/change-password",
+                new ChangePasswordRequest(
+                    "OldPassword123!",
+                    "NewPassword456!"));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            changeResponse.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var refreshResponse =
+            await _client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new RefreshTokenRequest(
+                    authResponse.RefreshToken));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            refreshResponse.StatusCode);
+    }
 }

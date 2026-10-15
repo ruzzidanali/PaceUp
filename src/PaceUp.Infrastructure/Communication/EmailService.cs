@@ -1,19 +1,18 @@
+using MailKit.Net.Smtp;
+using System.Net.Sockets;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
+using MimeKit;
 using PaceUp.Application.Abstractions.Communication;
-using Resend;
-
+using PaceUp.Application.Exceptions;
 namespace PaceUp.Infrastructure.Communication;
 
 public class EmailService : IEmailService
 {
-    private readonly IResend _resend;
     private readonly IConfiguration _configuration;
 
-    public EmailService(
-        IResend resend,
-        IConfiguration configuration)
+    public EmailService(IConfiguration configuration)
     {
-        _resend = resend;
         _configuration = configuration;
     }
 
@@ -33,17 +32,26 @@ public class EmailService : IEmailService
         var resetUrl =
             $"{baseUrl}?token={Uri.EscapeDataString(resetToken)}";
 
-        var message = new EmailMessage();
+        var message = new MimeMessage();
 
-        message.From =
-            _configuration["Resend:FromEmail"]
-            ?? "PaceUp <onboarding@resend.dev>";
+        var senderEmail = _configuration["Gmail:Email"];
+        if (string.IsNullOrWhiteSpace(senderEmail))
+        {
+            throw new InvalidOperationException(
+                "Gmail:Email is not configured."
+            );
+        }
 
-        message.To.Add(email);
+        message.From.Add(
+            new MailboxAddress("PaceUp", senderEmail)
+        );
+
+        message.To.Add(MailboxAddress.Parse(email));
 
         message.Subject = "Reset your PaceUp password";
+        var bodyBuilder = new BodyBuilder();
 
-        message.HtmlBody = $"""
+        bodyBuilder.HtmlBody = $"""
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -292,7 +300,7 @@ public class EmailService : IEmailService
             </html>
             """;
 
-        message.TextBody =
+        bodyBuilder.TextBody =
             $"""
             paceup
 
@@ -312,9 +320,9 @@ public class EmailService : IEmailService
             — PaceUp
             """;
 
-        await _resend.EmailSendAsync(
-            message,
-            cancellationToken);
+        message.Body = bodyBuilder.ToMessageBody();
+
+        await SendEmailAsync(message, cancellationToken);
     }
 
     public async Task SendEmailVerificationAsync(
@@ -329,17 +337,26 @@ public class EmailService : IEmailService
         var verificationUrl =
             $"{baseUrl}?token={Uri.EscapeDataString(verificationToken)}";
 
-        var message = new EmailMessage();
+        var message = new MimeMessage();
 
-        message.From =
-            _configuration["Resend:FromEmail"]
-            ?? "PaceUp <onboarding@resend.dev>";
+        var senderEmail = _configuration["Gmail:Email"];
+        if (string.IsNullOrWhiteSpace(senderEmail))
+        {
+            throw new InvalidOperationException(
+                "Gmail:Email is not configured."
+            );
+        }
 
-        message.To.Add(email);
+        message.From.Add(
+            new MailboxAddress("PaceUp", senderEmail)
+        );
+
+        message.To.Add(MailboxAddress.Parse(email));
 
         message.Subject = "Verify your PaceUp email";
+        var bodyBuilder = new BodyBuilder();
 
-        message.HtmlBody = $"""
+        bodyBuilder.HtmlBody = $"""
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -552,7 +569,7 @@ public class EmailService : IEmailService
         </html>
         """;
 
-        message.TextBody =
+        bodyBuilder.TextBody =
             $"""
         paceup
 
@@ -569,8 +586,71 @@ public class EmailService : IEmailService
         — PaceUp
         """;
 
-        await _resend.EmailSendAsync(
-            message,
-            cancellationToken);
+        message.Body = bodyBuilder.ToMessageBody();
+
+        await SendEmailAsync(message, cancellationToken);
+    }
+
+    private async Task SendEmailAsync(
+    MimeMessage message,
+    CancellationToken cancellationToken)
+    {
+        var senderEmail = _configuration["Gmail:Email"];
+        var appPassword = _configuration["Gmail:AppPassword"];
+        var smtpHost = _configuration["Gmail:SmtpHost"] ?? "smtp.gmail.com";
+
+        var smtpPortValue = _configuration["Gmail:SmtpPort"] ?? "587";
+
+        if (string.IsNullOrWhiteSpace(senderEmail) ||
+            string.IsNullOrWhiteSpace(appPassword))
+        {
+            throw new InvalidOperationException(
+                "Gmail SMTP credentials are not configured.");
+        }
+
+        if (!int.TryParse(smtpPortValue, out var smtpPort) ||
+            smtpPort is < 1 or > 65535)
+        {
+            throw new InvalidOperationException(
+                "Gmail:SmtpPort must be a valid TCP port.");
+        }
+
+        try
+        {
+            using var client = new SmtpClient();
+
+            await client.ConnectAsync(
+                smtpHost,
+                smtpPort,
+                SecureSocketOptions.StartTls,
+                cancellationToken);
+
+            await client.AuthenticateAsync(
+                senderEmail,
+                appPassword,
+                cancellationToken);
+
+            await client.SendAsync(message, cancellationToken);
+
+            await client.DisconnectAsync(
+                true,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (
+            ex is MailKit.Net.Smtp.SmtpCommandException ||
+            ex is MailKit.Net.Smtp.SmtpProtocolException ||
+            ex is MailKit.Security.AuthenticationException ||
+            ex is System.IO.IOException ||
+            ex is SocketException ||
+            ex is TimeoutException)
+        {
+            throw new EmailDeliveryException(
+                "Email delivery failed.",
+                ex);
+        }
     }
 }

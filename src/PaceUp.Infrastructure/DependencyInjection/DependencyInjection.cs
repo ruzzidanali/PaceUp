@@ -7,7 +7,6 @@ using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Infrastructure.Authentication;
 using PaceUp.Application.Abstractions.Communication;
 using PaceUp.Infrastructure.Communication;
-using Resend;
 using Microsoft.Extensions.Options;
 using PaceUp.Infrastructure.Storage;
 
@@ -65,17 +64,6 @@ public static class DependencyInjection
             provider => provider.GetRequiredService<SupabaseStorageService>());
 
         services.AddOptions();
-
-        services.AddHttpClient<ResendClient>();
-
-        services.Configure<ResendClientOptions>(options =>
-        {
-            options.ApiToken =
-                Environment.GetEnvironmentVariable("RESEND_API_KEY")
-                ?? string.Empty;
-        });
-
-        services.AddTransient<IResend, ResendClient>();
 
         return services;
     }

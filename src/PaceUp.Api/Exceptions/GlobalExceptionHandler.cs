@@ -47,6 +47,13 @@ public class GlobalExceptionHandler : IExceptionHandler
                 "Invalid request: {Message}",
                 exception.Message);
         }
+        else if (exception is EmailDeliveryException)
+        {
+            _logger.LogError(
+                exception,
+                "Email delivery failed."
+            );
+        }
         else
         {
             _logger.LogError(
@@ -68,6 +75,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             ArgumentException =>
                 StatusCodes.Status400BadRequest,
 
+            EmailDeliveryException =>
+                StatusCodes.Status503ServiceUnavailable,
+
             _ =>
                 StatusCodes.Status500InternalServerError
         };
@@ -86,13 +96,23 @@ public class GlobalExceptionHandler : IExceptionHandler
             ArgumentException =>
                 "Invalid request",
 
+            EmailDeliveryException =>
+                "Email service unavailable",
+
             _ =>
                 "An unexpected error occurred."
         };
 
-        var detail = statusCode == StatusCodes.Status500InternalServerError
-            ? "An unexpected error occurred. Please try again later."
-            : exception.Message;
+        var detail = exception switch
+        {
+            EmailDeliveryException =>
+                "We could not send the email right now. Please try again later.",
+
+            _ when statusCode == StatusCodes.Status500InternalServerError =>
+                "An unexpected error occurred. Please try again later.",
+
+            _ => exception.Message
+        };
 
         var problemDetails = new ProblemDetails
         {

@@ -8,8 +8,12 @@ public interface IUserService
         CreateUserRequest request,
         CancellationToken cancellationToken);
 
-    Task<UserResponse?> GetByIdAsync(
+    Task<PublicUserResponse?> GetByIdAsync(
         Guid id,
+        CancellationToken cancellationToken);
+
+    Task<UserResponse?> GetMeAsync(
+        Guid userId,
         CancellationToken cancellationToken);
 
     Task<UserResponse?> UpdateProfileAsync(

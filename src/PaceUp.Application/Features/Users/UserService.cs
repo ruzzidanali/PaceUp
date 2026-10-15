@@ -62,7 +62,7 @@ public class UserService : IUserService
         return Map(user);
     }
 
-    public async Task<UserResponse?> GetByIdAsync(
+    public async Task<PublicUserResponse?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -74,9 +74,34 @@ public class UserService : IUserService
 
         return user is null
             ? null
+            : MapPublic(user);
+    }
+
+    public async Task<UserResponse?> GetMeAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == userId,
+                cancellationToken);
+
+        return user is null
+            ? null
             : Map(user);
     }
 
+    private static PublicUserResponse MapPublic(User user)
+    {
+        return new PublicUserResponse(
+            user.Id,
+            user.Username,
+            user.DisplayName,
+            user.Bio,
+            user.ProfileImageUrl,
+            user.CreatedAt);
+    }
     private static UserResponse Map(User user)
     {
         return new UserResponse(
@@ -394,4 +419,3 @@ public class UserService : IUserService
         return users;
     }
 }
-

@@ -1,4 +1,6 @@
+
 using PaceUp.Application.Abstractions.Communication;
+using PaceUp.Application.Exceptions;
 
 namespace PaceUp.IntegrationTests.Infrastructure;
 
@@ -7,6 +9,8 @@ public sealed class FakeEmailService : IEmailService
     public List<(string Email, string ResetToken)> SentPasswordResetEmails { get; } = [];
 
     public List<(string Email, string VerificationToken)> SentEmailVerificationEmails { get; } = [];
+
+    public bool ShouldFailVerificationEmail { get; set; }
 
     public Task SendPasswordResetEmailAsync(
         string email,
@@ -23,6 +27,12 @@ public sealed class FakeEmailService : IEmailService
         string verificationToken,
         CancellationToken cancellationToken)
     {
+        if (ShouldFailVerificationEmail)
+        {
+            throw new EmailDeliveryException(
+                "Email delivery failed.");
+        }
+
         SentEmailVerificationEmails.Add((email, verificationToken));
 
         return Task.CompletedTask;
