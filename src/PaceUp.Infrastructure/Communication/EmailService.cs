@@ -1,19 +1,22 @@
-using MailKit.Net.Smtp;
-using System.Net.Sockets;
-using MailKit.Security;
+
 using Microsoft.Extensions.Configuration;
 using MimeKit;
 using PaceUp.Application.Abstractions.Communication;
 using PaceUp.Application.Exceptions;
+using System.Net.Http.Json;
 namespace PaceUp.Infrastructure.Communication;
 
 public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public EmailService(IConfiguration configuration)
+    public EmailService(
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task SendPasswordResetEmailAsync(
@@ -34,11 +37,11 @@ public class EmailService : IEmailService
 
         var message = new MimeMessage();
 
-        var senderEmail = _configuration["Gmail:Email"];
+        var senderEmail = _configuration["Resend:FromEmail"];
         if (string.IsNullOrWhiteSpace(senderEmail))
         {
             throw new InvalidOperationException(
-                "Gmail:Email is not configured."
+                "Resend:FromEmail is not configured."
             );
         }
 
@@ -339,11 +342,11 @@ public class EmailService : IEmailService
 
         var message = new MimeMessage();
 
-        var senderEmail = _configuration["Gmail:Email"];
+        var senderEmail = _configuration["Resend:FromEmail"];
         if (string.IsNullOrWhiteSpace(senderEmail))
         {
             throw new InvalidOperationException(
-                "Gmail:Email is not configured."
+                "Resend:FromEmail is not configured."
             );
         }
 
@@ -591,66 +594,76 @@ public class EmailService : IEmailService
         await SendEmailAsync(message, cancellationToken);
     }
 
+
+
     private async Task SendEmailAsync(
-    MimeMessage message,
-    CancellationToken cancellationToken)
+        MimeMessage message,
+        CancellationToken cancellationToken)
     {
-        var senderEmail = _configuration["Gmail:Email"];
-        var appPassword = _configuration["Gmail:AppPassword"];
-        var smtpHost = _configuration["Gmail:SmtpHost"] ?? "smtp.gmail.com";
+        var apiKey = _configuration["RESEND_API_KEY"];
+        var senderEmail = _configuration["Resend:FromEmail"];
 
-        var smtpPortValue = _configuration["Gmail:SmtpPort"] ?? "587";
-
-        if (string.IsNullOrWhiteSpace(senderEmail) ||
-            string.IsNullOrWhiteSpace(appPassword))
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException(
-                "Gmail SMTP credentials are not configured.");
+                "RESEND_API_KEY is not configured.");
         }
 
-        if (!int.TryParse(smtpPortValue, out var smtpPort) ||
-            smtpPort is < 1 or > 65535)
+        if (string.IsNullOrWhiteSpace(senderEmail))
         {
             throw new InvalidOperationException(
-                "Gmail:SmtpPort must be a valid TCP port.");
+                "Resend:FromEmail is not configured.");
         }
 
         try
         {
-            using var client = new SmtpClient();
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "https://api.resend.com/emails");
 
-            await client.ConnectAsync(
-                smtpHost,
-                smtpPort,
-                SecureSocketOptions.StartTls,
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Bearer",
+                    apiKey);
+
+            request.Content = System.Net.Http.Json.JsonContent.Create(
+                new
+                {
+                    from = $"PaceUp <{senderEmail}>",
+                    to = message.To.Mailboxes
+                        .Select(mailbox => mailbox.Address)
+                        .ToArray(),
+                    subject = message.Subject,
+                    html = message.HtmlBody,
+                    text = message.TextBody
+                });
+
+            var client = _httpClientFactory.CreateClient();
+
+            using var response = await client.SendAsync(
+                request,
                 cancellationToken);
 
-            await client.AuthenticateAsync(
-                senderEmail,
-                appPassword,
-                cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(
+                    cancellationToken);
 
-            await client.SendAsync(message, cancellationToken);
-
-            await client.DisconnectAsync(
-                true,
-                cancellationToken);
+                throw new HttpRequestException(
+                    $"Resend returned HTTP {(int)response.StatusCode}: " +
+                    responseBody);
+            }
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch (Exception ex) when (
-            ex is MailKit.Net.Smtp.SmtpCommandException ||
-            ex is MailKit.Net.Smtp.SmtpProtocolException ||
-            ex is MailKit.Security.AuthenticationException ||
-            ex is System.IO.IOException ||
-            ex is SocketException ||
-            ex is TimeoutException)
+        catch (HttpRequestException ex)
         {
             throw new EmailDeliveryException(
-                "Email delivery failed.",
+                "Email delivery through Resend failed.",
                 ex);
         }
     }
+
 }

@@ -1630,6 +1630,70 @@ public class AuthenticationServiceTests
         Assert.False(token.IsUsed());
     }
 
+
+    [Fact]
+    public async Task ResendVerificationAsync_WhenEmailFails_ShouldNotLeaveNewTokenActive()
+    {
+        await using var db = CreateDatabase();
+
+        var passwordHasher = new Argon2PasswordHasher();
+
+        var user = new User(
+            "resend_failure_user",
+            "resend_failure@example.com",
+            "Resend Failure User");
+
+        var identity = new UserIdentity(
+            user.Id,
+            passwordHasher.Hash("Password123!"));
+
+        db.Users.Add(user);
+        db.UserIdentities.Add(identity);
+
+        await db.SaveChangesAsync();
+
+        var existingToken = new EmailVerificationToken(
+            user.Id,
+            TokenHashing.Hash("old-verification-token"),
+            DateTime.UtcNow.AddHours(24));
+
+        db.EmailVerificationTokens.Add(existingToken);
+        await db.SaveChangesAsync();
+
+        var service = new AuthenticationService(
+            db,
+            passwordHasher,
+            new FakeJwtTokenService(),
+            new FakeEmailVerificationTokenService(
+                "new-verification-token"),
+            new FakePasswordResetTokenService(
+                "test-password-reset-token"),
+            new FakeRefreshTokenService(
+                "test-refresh-token"),
+            new FailingEmailService());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ResendVerificationAsync(
+                user.Email,
+                CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+
+        var tokens = await db.EmailVerificationTokens
+            .AsNoTracking()
+            .Where(x => x.UserId == user.Id)
+            .ToListAsync();
+
+        Assert.Single(tokens);
+
+        Assert.False(tokens[0].IsExpired());
+        Assert.False(tokens[0].IsUsed());
+        Assert.Equal(
+            TokenHashing.Hash("old-verification-token"),
+            tokens[0].Token);
+    }
+
+
     [Fact]
     public async Task ResendVerificationAsync_ShouldExpireExistingToken()
     {

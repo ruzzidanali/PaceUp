@@ -43,6 +43,8 @@ public static class DependencyInjection
 
         services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
 
+        services.AddHttpClient();
+
         services.AddScoped<IEmailService, EmailService>();
 
         services.Configure<SupabaseStorageOptions>(options =>

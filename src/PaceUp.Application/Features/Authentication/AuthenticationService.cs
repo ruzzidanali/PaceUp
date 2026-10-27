@@ -249,9 +249,10 @@ public class AuthenticationService : IAuthenticationService
             cancellationToken);
     }
 
+
     public async Task ResendVerificationAsync(
-    string email,
-    CancellationToken cancellationToken)
+        string email,
+        CancellationToken cancellationToken)
     {
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(
@@ -268,54 +269,44 @@ public class AuthenticationService : IAuthenticationService
                 x => x.UserId == user.Id,
                 cancellationToken);
 
-        if (identity is null)
-        {
-            return;
-        }
-
-        if (identity.EmailVerified)
+        if (identity is null || identity.EmailVerified)
         {
             return;
         }
 
         var now = DateTime.UtcNow;
 
-        var existingTokens =
-            await _dbContext.EmailVerificationTokens
-                .Where(
-                    x =>
-                        x.UserId == user.Id &&
-                        x.ExpiresAt > now &&
-                        x.UsedAt == null)
-                .ToListAsync(
-                    cancellationToken);
+        var existingTokens = await _dbContext.EmailVerificationTokens
+            .Where(x =>
+                x.UserId == user.Id &&
+                x.ExpiresAt > now &&
+                x.UsedAt == null)
+            .ToListAsync(cancellationToken);
 
+        var token = _emailVerificationTokenService.GenerateToken();
+
+        var verificationToken = new EmailVerificationToken(
+            user.Id,
+            TokenHashing.Hash(token),
+            DateTime.UtcNow.AddHours(24));
+
+        // Send first. If delivery fails, the database remains unchanged.
+        await _emailService.SendEmailVerificationAsync(
+            user.Email,
+            token,
+            cancellationToken);
+
+        // Only invalidate existing tokens after successful delivery.
         foreach (var existingToken in existingTokens)
         {
             existingToken.Expire();
         }
 
-        var token =
-            _emailVerificationTokenService.GenerateToken();
+        _dbContext.EmailVerificationTokens.Add(verificationToken);
 
-        var verificationToken =
-            new EmailVerificationToken(
-                user.Id,
-                TokenHashing.Hash(token),
-                DateTime.UtcNow.AddHours(24));
-
-        _dbContext.EmailVerificationTokens.Add(
-            verificationToken);
-
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
-
-        await _emailService.SendEmailVerificationAsync(
-            user.Email,
-            token,
-            cancellationToken
-        );
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
 
 
     public async Task<EmailVerificationResponse> VerifyEmailAsync(
