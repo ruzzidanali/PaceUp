@@ -156,30 +156,6 @@ app.UseExceptionHandler();
 
 app.UseForwardedHeaders();
 
-// TEMPORARY IP DIAGNOSTIC
-app.Use(async (context, next) =>
-{
-    if (context.Request.Headers.ContainsKey(
-        "X-PaceUp-IP-Diagnostic"))
-    {
-        app.Logger.LogInformation(
-            """
-            IP DIAGNOSTIC
-            Remote IP: {RemoteIp}
-            X-Forwarded-For: {ForwardedFor}
-            CF-Connecting-IP: {CloudflareIP}
-            CF-Ray: {CloudflareRay}
-            """,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers["X-Forwarded-For"].ToString(),
-            context.Request.Headers["CF-Connecting-IP"].ToString(),
-            context.Request.Headers["CF-Ray"].ToString());
-    }
-
-    await next();
-});
-
-// EXISTING SECURITY HEADERS — PRESERVED
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
