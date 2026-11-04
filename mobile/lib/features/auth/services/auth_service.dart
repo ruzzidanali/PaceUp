@@ -18,7 +18,7 @@ class AuthService {
 
   Future<AuthResponse> login(LoginRequest request) async {
     final response = await _apiClient.post(
-      '/auth/login',
+      '/api/auth/login',
       body: request.toJson(),
     );
 
@@ -47,7 +47,7 @@ class AuthService {
 
   Future<RegistrationResponse> register(RegisterRequest request) async {
     final response = await _apiClient.post(
-      '/auth/register',
+      '/api/auth/register',
       body: request.toJson(),
     );
 
@@ -64,7 +64,7 @@ class AuthService {
 
   Future<void> verifyEmail({required String token}) async {
     final response = await _apiClient.post(
-      '/auth/verify-email',
+      '/api/auth/verify-email',
       body: {'token': token},
     );
 
@@ -96,7 +96,7 @@ class AuthService {
       throw Exception('No access token available.');
     }
 
-    final response = await _apiClient.get('/users/me', token: accessToken);
+    final response = await _apiClient.get('/api/users/me', token: accessToken);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -118,7 +118,7 @@ class AuthService {
     }
 
     final response = await _apiClient.post(
-      '/auth/refresh',
+      '/api/auth/refresh',
       body: RefreshTokenRequest(refreshToken: refreshToken).toJson(),
     );
 
@@ -145,7 +145,7 @@ class AuthService {
 
   Future<void> forgotPassword({required String email}) async {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+      Uri.parse('${ApiConfig.baseUrl}/api/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
     );
@@ -160,7 +160,7 @@ class AuthService {
     required String newPassword,
   }) async {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
+      Uri.parse('${ApiConfig.baseUrl}/api/auth/reset-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'token': token, 'newPassword': newPassword}),
     );
@@ -187,7 +187,7 @@ class AuthService {
     }
 
     final response = await _apiClient.post(
-      '/auth/revoke',
+      '/api/auth/revoke',
       body: RefreshTokenRequest(refreshToken: refreshToken).toJson(),
     );
 

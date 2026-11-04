@@ -24,7 +24,7 @@ class LeaderboardService {
     }
 
     final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/leaderboards',
+      '${ApiConfig.baseUrl}/api/leaderboards',
     ).replace(
       queryParameters: {
         'period': period,

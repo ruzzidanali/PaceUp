@@ -177,7 +177,15 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
     app.UseStaticFiles();
+}
 
+var enableRateLimiterInTests =
+    app.Configuration.GetValue<bool>(
+        "Testing:EnableRateLimiter");
+
+if (!app.Environment.IsEnvironment("Testing") ||
+    enableRateLimiterInTests)
+{
     app.UseRateLimiter();
 }
 

@@ -8,16 +8,11 @@ class FeedService {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  FeedService({
-    ApiClient? apiClient,
-    TokenStorage? tokenStorage,
-  })  : _apiClient = apiClient ?? ApiClient(),
-        _tokenStorage = tokenStorage ?? TokenStorage();
+  FeedService({ApiClient? apiClient, TokenStorage? tokenStorage})
+    : _apiClient = apiClient ?? ApiClient(),
+      _tokenStorage = tokenStorage ?? TokenStorage();
 
-  Future<PagedFeedResponse> getFeed({
-    int page = 1,
-    int pageSize = 20,
-  }) async {
+  Future<PagedFeedResponse> getFeed({int page = 1, int pageSize = 20}) async {
     final accessToken = await _tokenStorage.getAccessToken();
 
     if (accessToken == null || accessToken.isEmpty) {
@@ -32,7 +27,7 @@ class FeedService {
     final query = Uri(queryParameters: queryParameters).query;
 
     final response = await _apiClient.get(
-      '/feed?$query',
+      '/api/feed?$query',
       token: accessToken,
     );
 

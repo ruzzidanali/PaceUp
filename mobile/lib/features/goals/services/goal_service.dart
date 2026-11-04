@@ -19,7 +19,7 @@ class GoalService {
       throw Exception('No access token available.');
     }
 
-    final response = await _apiClient.get('/goals', token: accessToken);
+    final response = await _apiClient.get('/api/goals', token: accessToken);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -42,7 +42,7 @@ class GoalService {
       throw Exception('No access token available.');
     }
 
-    final response = await _apiClient.get('/goals/$id', token: accessToken);
+    final response = await _apiClient.get('/api/goals/$id', token: accessToken);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -64,7 +64,7 @@ class GoalService {
     }
 
     final response = await _apiClient.get(
-      '/goals/$id/progress',
+      '/api/goals/$id/progress',
       token: accessToken,
     );
 
@@ -88,7 +88,7 @@ class GoalService {
     }
 
     final response = await _apiClient.post(
-      '/goals',
+      '/api/goals',
       body: request.toJson(),
       token: accessToken,
     );
@@ -113,7 +113,7 @@ class GoalService {
     }
 
     final response = await _apiClient.put(
-      '/goals/$id',
+      '/api/goals/$id',
       body: request.toJson(),
       token: accessToken,
     );
@@ -137,7 +137,10 @@ class GoalService {
       throw Exception('No access token available.');
     }
 
-    final response = await _apiClient.delete('/goals/$id', token: accessToken);
+    final response = await _apiClient.delete(
+      '/api/goals/$id',
+      token: accessToken,
+    );
 
     if (response.statusCode != 204) {
       throw Exception(

@@ -36,7 +36,7 @@ class ActivityService {
     final query = Uri(queryParameters: queryParameters).query;
 
     final response = await _apiClient.get(
-      '/activities?$query',
+      '/api/activities?$query',
       token: accessToken,
     );
 
@@ -74,7 +74,7 @@ class ActivityService {
         : '?${Uri(queryParameters: queryParameters).query}';
 
     final response = await _apiClient.get(
-      '/activities/stats$query',
+      '/api/activities/stats$query',
       token: accessToken,
     );
 
@@ -112,7 +112,7 @@ class ActivityService {
     final query = Uri(queryParameters: queryParameters).query;
 
     final response = await _apiClient.get(
-      '/activities/trends?$query',
+      '/api/activities/trends?$query',
       token: accessToken,
     );
 
@@ -136,7 +136,7 @@ class ActivityService {
     }
 
     final response = await _apiClient.post(
-      '/activities',
+      '/api/activities',
       body: request.toJson(),
       token: accessToken,
     );
@@ -161,7 +161,7 @@ class ActivityService {
     }
 
     final response = await _apiClient.get(
-      '/activities/$id',
+      '/api/activities/$id',
       token: accessToken,
     );
 
@@ -188,7 +188,7 @@ class ActivityService {
     }
 
     final response = await _apiClient.put(
-      '/activities/$id',
+      '/api/activities/$id',
       body: request.toJson(),
       token: accessToken,
     );
@@ -213,7 +213,7 @@ class ActivityService {
     }
 
     final response = await _apiClient.delete(
-      '/activities/$id',
+      '/api/activities/$id',
       token: accessToken,
     );
 

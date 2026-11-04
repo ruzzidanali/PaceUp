@@ -26,7 +26,7 @@ class SocialService {
     final token = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/users/$userId/followers',
+      '/api/users/$userId/followers',
       token: token,
     );
 
@@ -46,7 +46,7 @@ class SocialService {
     final token = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/users/$userId/following',
+      '/api/users/$userId/following',
       token: token,
     );
 
@@ -66,7 +66,7 @@ class SocialService {
     final token = await _getAccessToken();
 
     final response = await _apiClient.post(
-      '/users/$userId/follow',
+      '/api/users/$userId/follow',
       token: token,
     );
 
@@ -82,7 +82,7 @@ class SocialService {
     final token = await _getAccessToken();
 
     final response = await _apiClient.delete(
-      '/users/$userId/follow',
+      '/api/users/$userId/follow',
       token: token,
     );
 
@@ -98,7 +98,7 @@ class SocialService {
     final token = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/users/$userId/follow-status',
+      '/api/users/$userId/follow-status',
       token: token,
     );
 
@@ -126,7 +126,7 @@ class SocialService {
     }
 
     final response = await _apiClient.get(
-      '/users/search?query=${Uri.encodeQueryComponent(trimmedQuery)}',
+      '/api/users/search?query=${Uri.encodeQueryComponent(trimmedQuery)}',
       token: token,
     );
 

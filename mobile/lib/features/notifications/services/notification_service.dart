@@ -8,17 +8,15 @@ class NotificationService {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  NotificationService({
-    ApiClient? apiClient,
-    TokenStorage? tokenStorage,
-  })  : _apiClient = apiClient ?? ApiClient(),
-        _tokenStorage = tokenStorage ?? TokenStorage();
+  NotificationService({ApiClient? apiClient, TokenStorage? tokenStorage})
+    : _apiClient = apiClient ?? ApiClient(),
+      _tokenStorage = tokenStorage ?? TokenStorage();
 
   Future<List<NotificationResponse>> getNotifications() async {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/notifications',
+      '/api/notifications',
       token: accessToken,
     );
 
@@ -37,9 +35,7 @@ class NotificationService {
 
     return decoded
         .map(
-          (item) => NotificationResponse.fromJson(
-            item as Map<String, dynamic>,
-          ),
+          (item) => NotificationResponse.fromJson(item as Map<String, dynamic>),
         )
         .toList();
   }
@@ -48,7 +44,7 @@ class NotificationService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.patch(
-      '/notifications/$notificationId/read',
+      '/api/notifications/$notificationId/read',
       token: accessToken,
     );
 
@@ -64,7 +60,7 @@ class NotificationService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.post(
-      '/notifications/read-all',
+      '/api/notifications/read-all',
       token: accessToken,
     );
 

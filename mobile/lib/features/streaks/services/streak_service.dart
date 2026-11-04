@@ -20,7 +20,7 @@ class StreakService {
     }
 
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/streaks'),
+      Uri.parse('${ApiConfig.baseUrl}/api/streaks'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',

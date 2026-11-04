@@ -8,17 +8,15 @@ class KudosService {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  KudosService({
-    ApiClient? apiClient,
-    TokenStorage? tokenStorage,
-  })  : _apiClient = apiClient ?? ApiClient(),
-        _tokenStorage = tokenStorage ?? TokenStorage();
+  KudosService({ApiClient? apiClient, TokenStorage? tokenStorage})
+    : _apiClient = apiClient ?? ApiClient(),
+      _tokenStorage = tokenStorage ?? TokenStorage();
 
   Future<KudosResponse> getKudos(String activityId) async {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/activities/$activityId/kudos',
+      '/api/activities/$activityId/kudos',
       token: accessToken,
     );
 
@@ -38,7 +36,7 @@ class KudosService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.post(
-      '/activities/$activityId/kudos',
+      '/api/activities/$activityId/kudos',
       token: accessToken,
     );
 
@@ -58,7 +56,7 @@ class KudosService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.delete(
-      '/activities/$activityId/kudos',
+      '/api/activities/$activityId/kudos',
       token: accessToken,
     );
 

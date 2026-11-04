@@ -21,7 +21,7 @@ class PersonalRecordService {
     }
 
     final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/personal-records',
+      '${ApiConfig.baseUrl}/api/personal-records',
     );
 
     final response = await http.get(

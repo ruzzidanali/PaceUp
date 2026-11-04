@@ -15,7 +15,10 @@ class ChallengeService {
   Future<List<ChallengeResponse>> getChallenges() async {
     final accessToken = await _getAccessToken();
 
-    final response = await _apiClient.get('/challenges', token: accessToken);
+    final response = await _apiClient.get(
+      '/api/challenges',
+      token: accessToken,
+    );
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -35,7 +38,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/challenges/$id',
+      '/api/challenges/$id',
       token: accessToken,
     );
 
@@ -57,7 +60,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.post(
-      '/challenges',
+      '/api/challenges',
       body: request.toJson(),
       token: accessToken,
     );
@@ -81,7 +84,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.put(
-      '/challenges/$id',
+      '/api/challenges/$id',
       body: request.toJson(),
       token: accessToken,
     );
@@ -102,7 +105,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.delete(
-      '/challenges/$id',
+      '/api/challenges/$id',
       token: accessToken,
     );
 
@@ -118,7 +121,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.post(
-      '/challenges/$id/join',
+      '/api/challenges/$id/join',
       token: accessToken,
     );
 
@@ -134,7 +137,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.delete(
-      '/challenges/$id/join',
+      '/api/challenges/$id/join',
       token: accessToken,
     );
 
@@ -150,7 +153,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/challenges/$id/progress',
+      '/api/challenges/$id/progress',
       token: accessToken,
     );
 
@@ -174,7 +177,7 @@ class ChallengeService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.get(
-      '/challenges/$id/leaderboard',
+      '/api/challenges/$id/leaderboard',
       token: accessToken,
     );
 

@@ -20,7 +20,7 @@ class AchievementService {
     }
 
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/achievements'),
+      Uri.parse('${ApiConfig.baseUrl}/api/achievements'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',

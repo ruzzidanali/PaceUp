@@ -20,7 +20,7 @@ class RouteService {
     }
 
     final response = await _apiClient.get(
-      '/activities/$activityId/route',
+      '/api/activities/$activityId/route',
       token: accessToken,
     );
 
@@ -47,7 +47,7 @@ class RouteService {
     }
 
     final response = await _apiClient.post(
-      '/activities/$activityId/route',
+      '/api/activities/$activityId/route',
       body: request.toJson(),
       token: accessToken,
     );

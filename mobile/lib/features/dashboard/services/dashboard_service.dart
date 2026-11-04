@@ -19,7 +19,7 @@ class DashboardService {
       throw Exception('No access token available.');
     }
 
-    final response = await _apiClient.get('/dashboard', token: accessToken);
+    final response = await _apiClient.get('/api/dashboard', token: accessToken);
 
     if (response.statusCode != 200) {
       throw Exception(

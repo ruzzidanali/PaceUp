@@ -27,7 +27,7 @@ class ProfileService {
   Future<UserResponse> getMe() async {
     final accessToken = await _getAccessToken();
 
-    final response = await _apiClient.get('/users/me', token: accessToken);
+    final response = await _apiClient.get('/api/users/me', token: accessToken);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -44,7 +44,10 @@ class ProfileService {
   Future<UserResponse> getUser(String userId) async {
     final accessToken = await _getAccessToken();
 
-    final response = await _apiClient.get('/users/$userId', token: accessToken);
+    final response = await _apiClient.get(
+      '/api/users/$userId',
+      token: accessToken,
+    );
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -62,7 +65,7 @@ class ProfileService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.put(
-      '/users/me',
+      '/api/users/me',
       body: request.toJson(),
       token: accessToken,
     );
@@ -83,7 +86,7 @@ class ProfileService {
     final accessToken = await _getAccessToken();
 
     final response = await _apiClient.putMultipart(
-      '/users/me/profile-image',
+      '/api/users/me/profile-image',
       fileField: 'file',
       filePath: image.path,
       contentType: image.mimeType ?? 'image/jpeg',
@@ -105,7 +108,10 @@ class ProfileService {
   Future<void> deleteAccount() async {
     final accessToken = await _getAccessToken();
 
-    final response = await _apiClient.delete('/users/me', token: accessToken);
+    final response = await _apiClient.delete(
+      '/api/users/me',
+      token: accessToken,
+    );
 
     if (response.statusCode != 204) {
       throw Exception(
