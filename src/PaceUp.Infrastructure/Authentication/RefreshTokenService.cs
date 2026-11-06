@@ -6,16 +6,17 @@ using PaceUp.Application.Abstractions.Authentication;
 using PaceUp.Application.Abstractions.Persistence;
 using PaceUp.Application.Configuration;
 using PaceUp.Domain.Entities;
+using PaceUp.Infrastructure.Persistence;
 
 namespace PaceUp.Infrastructure.Authentication;
 
 public class RefreshTokenService : IRefreshTokenService
 {
-    private readonly IApplicationDbContext _dbContext;
+    private readonly PaceUpDbContext _dbContext;
     private readonly JwtOptions _options;
 
     public RefreshTokenService(
-        IApplicationDbContext dbContext,
+        PaceUpDbContext dbContext,
         IOptions<JwtOptions> options)
     {
         _dbContext = dbContext;
@@ -114,47 +115,73 @@ public class RefreshTokenService : IRefreshTokenService
     }
 
     public async Task<string?> RotateAsync(
-        string refreshToken,
-        CancellationToken cancellationToken)
+    string refreshToken,
+    CancellationToken cancellationToken)
     {
         var tokenHash = HashToken(refreshToken);
+        var now = DateTime.UtcNow;
 
-        var existingToken =
-            await _dbContext.RefreshTokens
-                .FirstOrDefaultAsync(
-                    x => x.TokenHash == tokenHash,
-                    cancellationToken);
+        await using var transaction =
+            await _dbContext.Database.BeginTransactionAsync(
+                cancellationToken);
 
-        if (existingToken is null ||
-            !existingToken.IsActive())
+        try
         {
-            return null;
-        }
+            var existingToken =
+                await _dbContext.RefreshTokens
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        x => x.TokenHash == tokenHash,
+                        cancellationToken);
 
-        var newRawToken = GenerateToken();
+            if (existingToken is null ||
+                existingToken.RevokedAt.HasValue ||
+                existingToken.ExpiresAt <= now)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return null;
+            }
 
-        var newTokenHash = HashToken(newRawToken);
+            var newRawToken = GenerateToken();
+            var newTokenHash = HashToken(newRawToken);
 
-        var newExpiresAt =
-            DateTime.UtcNow.AddDays(
-                _options.RefreshTokenExpirationDays);
-
-        var replacementToken =
-            new RefreshToken(
+            var replacementToken = new RefreshToken(
                 existingToken.UserId,
                 newTokenHash,
-                newExpiresAt);
+                now.AddDays(_options.RefreshTokenExpirationDays));
 
-        _dbContext.RefreshTokens.Add(
-            replacementToken);
+            var affectedRows =
+                await _dbContext.RefreshTokens
+                    .Where(x =>
+                        x.Id == existingToken.Id &&
+                        x.RevokedAt == null &&
+                        x.ExpiresAt > now)
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                            .SetProperty(x => x.RevokedAt, now)
+                            .SetProperty(
+                                x => x.ReplacedByTokenId,
+                                replacementToken.Id),
+                        cancellationToken);
 
-        existingToken.ReplaceWith(
-            replacementToken.Id);
+            if (affectedRows != 1)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return null;
+            }
 
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
+            _dbContext.RefreshTokens.Add(replacementToken);
 
-        return newRawToken;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return newRawToken;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     private static string GenerateToken()

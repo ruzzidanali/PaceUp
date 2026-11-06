@@ -18,6 +18,13 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = false;
+    options.Preload = false;
+});
+
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
@@ -155,6 +162,12 @@ using (var scope = app.Services.CreateScope())
 app.UseExceptionHandler();
 
 app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment() &&
+    !app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHsts();
+}
 
 app.Use(async (context, next) =>
 {

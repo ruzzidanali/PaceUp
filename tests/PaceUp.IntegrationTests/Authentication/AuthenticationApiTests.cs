@@ -1196,6 +1196,42 @@ public class AuthenticationApiTests
     }
 
     [Fact]
+    public async Task Refresh_ConcurrentRequests_ShouldAllowOnlyOneRotation()
+    {
+        var registerRequest = new RegisterRequest(
+            "refresh_concurrent_user",
+            "refresh_concurrent@example.com",
+            "Refresh Concurrent User",
+            "Password123!");
+
+        var login = await RegisterVerifyAndLoginAsync(
+            registerRequest);
+
+        var request = new RefreshTokenRequest(
+            login.RefreshToken);
+
+        var firstTask = _client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            request);
+
+        var secondTask = _client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            request);
+
+        var responses = await Task.WhenAll(
+            firstTask,
+            secondTask);
+
+        Assert.Single(
+    responses,
+    x => x.StatusCode == HttpStatusCode.OK);
+
+        Assert.Single(
+            responses,
+            x => x.StatusCode == HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task RevokeRefreshToken_ShouldInvalidateRefreshToken()
     {
         var registerRequest = new RegisterRequest(

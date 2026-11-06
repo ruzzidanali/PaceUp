@@ -5,20 +5,31 @@ using PaceUp.Infrastructure.Authentication;
 using PaceUp.Infrastructure.Persistence;
 using Microsoft.Extensions.Options;
 using PaceUp.Application.Configuration;
+using Microsoft.Data.Sqlite;
 
 namespace PaceUp.UnitTests.Authentication;
 
 public class RefreshTokenServiceTests
 {
-    private static PaceUpDbContext CreateDatabase()
+    private static SqliteConnection CreateConnection()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        return connection;
+    }
+
+    private static PaceUpDbContext CreateDatabase(
+        SqliteConnection connection)
     {
         var options =
             new DbContextOptionsBuilder<PaceUpDbContext>()
-                .UseInMemoryDatabase(
-                    Guid.NewGuid().ToString())
+                .UseSqlite(connection)
                 .Options;
 
-        return new PaceUpDbContext(options);
+        var db = new PaceUpDbContext(options);
+        db.Database.EnsureCreated();
+
+        return db;
     }
 
     private static RefreshTokenService CreateService(
@@ -39,7 +50,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task CreateAsync_ShouldReturnTokenAndPersistHash()
     {
-        await using var db = CreateDatabase();
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
 
         var service = CreateService(db);
 
@@ -77,8 +89,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task ValidateAsync_WithValidToken_ShouldReturnUserId()
     {
-        await using var db = CreateDatabase();
-
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
         var service = CreateService(db);
 
         var user =
@@ -108,7 +120,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task ValidateAsync_WithInvalidToken_ShouldReturnNull()
     {
-        await using var db = CreateDatabase();
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
 
         var service = CreateService(db);
 
@@ -123,8 +136,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task ValidateAsync_WithRevokedToken_ShouldReturnNull()
     {
-        await using var db = CreateDatabase();
-
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
         var service = CreateService(db);
 
         var user =
@@ -156,8 +169,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task RotateAsync_ShouldRevokeOldTokenAndCreateReplacement()
     {
-        await using var db = CreateDatabase();
-
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
         var service = CreateService(db);
 
         var user =
@@ -185,9 +198,10 @@ public class RefreshTokenServiceTests
             replacementToken);
 
         var tokens =
-            await db.RefreshTokens
-                .Where(x => x.UserId == user.Id)
-                .ToListAsync();
+    await db.RefreshTokens
+        .AsNoTracking()
+        .Where(x => x.UserId == user.Id)
+        .ToListAsync();
 
         Assert.Equal(2, tokens.Count);
 
@@ -212,7 +226,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task RotateAsync_WithAlreadyRotatedToken_ShouldReturnNull()
     {
-        await using var db = CreateDatabase();
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
 
         var service = CreateService(db);
 
@@ -248,7 +263,8 @@ public class RefreshTokenServiceTests
     [Fact]
     public async Task RevokeAsync_WithUnknownToken_ShouldDoNothing()
     {
-        await using var db = CreateDatabase();
+        await using var connection = CreateConnection();
+        await using var db = CreateDatabase(connection);
 
         var service = CreateService(db);
 
